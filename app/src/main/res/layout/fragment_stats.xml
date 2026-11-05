@@ -1,124 +1,89 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version='1.0' encoding='utf-8'?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/last_week_body"
     android:layout_width="match_parent"
-    android:layout_height="130dp"
-    android:orientation="horizontal"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@+id/last_week_header">
-
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+  <com.google.android.material.card.MaterialCardView
+      style="@style/Plees.Card"
+      android:id="@+id/fragment_stats_sleeps_layout"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginBottom="10dp"
+      app:cardBackgroundColor="?attr/colorPrimaryContainer">
     <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="120dp"
-        android:layout_margin="10dp"
-        android:layout_weight="1"
-        android:background="@color/dash_nights"
-        android:orientation="vertical">
-
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/fragment_stats_sleeps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#00000000"
-            android:textStyle="bold"
-            android:textAlignment="center"
-            android:textColor="@color/textColor"
-            android:textSize="24dp"
-            tools:text="87" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_margin="10dp"
-            android:background="#00000000"
-            android:paddingVertical="10dp"
-            android:text="@string/sleeps"
-            android:textAlignment="center"
-            android:textColor="@color/textColor"
-            android:textSize="16dp" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+      <TextView
+          android:id="@+id/fragment_stats_sleeps"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:textAppearance="@style/Plees.Title"
+          android:textColor="?attr/colorOnPrimaryContainer"/>
+      <TextView
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="6dp"
+          android:text="@string/sleeps"
+          android:textAppearance="?attr/textAppearanceTitleMedium"
+          android:textColor="?attr/colorOnPrimaryContainer"/>
     </LinearLayout>
-
+  </com.google.android.material.card.MaterialCardView>
+  <com.google.android.material.card.MaterialCardView
+      style="@style/Plees.Card"
+      android:id="@+id/fragment_stats_average_layout"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginBottom="10dp"
+      app:cardBackgroundColor="?attr/colorSecondaryContainer">
     <LinearLayout
-        android:id="@+id/fragment_stats_average_layout"
-        android:layout_width="0dp"
-        android:layout_height="120dp"
-        android:layout_margin="10dp"
-        android:layout_weight="1"
-        android:background="@color/dash_average"
-        android:orientation="vertical">
-
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/fragment_stats_average"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#00000000"
-            android:textStyle="bold"
-            android:textAlignment="center"
-            android:textColor="@color/textColor"
-            android:textSize="24dp"
-            tools:text="12:40" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_margin="10dp"
-            android:background="#00000000"
-            android:paddingVertical="10dp"
-            android:text="@string/average_string"
-            android:textAlignment="center"
-            android:textColor="@color/textColor"
-            android:textSize="16dp" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+      <TextView
+          android:id="@+id/fragment_stats_average"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:textAppearance="@style/Plees.Title"
+          android:textColor="?attr/colorOnSecondaryContainer"/>
+      <TextView
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="6dp"
+          android:text="@string/average_string"
+          android:textAppearance="?attr/textAppearanceTitleMedium"
+          android:textColor="?attr/colorOnSecondaryContainer"/>
     </LinearLayout>
-
+  </com.google.android.material.card.MaterialCardView>
+  <com.google.android.material.card.MaterialCardView
+      style="@style/Plees.Card"
+      android:id="@+id/fragment_stats_daily_layout"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginBottom="10dp"
+      app:cardBackgroundColor="?attr/colorTertiaryContainer">
     <LinearLayout
-        android:id="@+id/fragment_stats_daily_layout"
-        android:layout_width="0dp"
-        android:layout_height="120dp"
-        android:layout_margin="10dp"
-        android:layout_weight="1"
-        android:background="@color/dash_daily"
-        android:orientation="vertical">
-
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/fragment_stats_daily"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:background="#00000000"
-            android:textStyle="bold"
-            android:textAlignment="center"
-            android:textColor="@color/textColor"
-            android:textSize="24dp"
-            tools:text="8hrs" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="10dp"
-            android:background="#00000000"
-            android:paddingVertical="10dp"
-            android:text="@string/daily_average_string"
-            android:textAlignment="center"
-            android:textColor="@color/textColor"
-            android:textSize="16dp" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+      <TextView
+          android:id="@+id/fragment_stats_daily"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:textAppearance="@style/Plees.Title"
+          android:textColor="?attr/colorOnTertiaryContainer"/>
+      <TextView
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="6dp"
+          android:text="@string/daily_average_string"
+          android:textAppearance="?attr/textAppearanceTitleMedium"
+          android:textColor="?attr/colorOnTertiaryContainer"/>
     </LinearLayout>
+  </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

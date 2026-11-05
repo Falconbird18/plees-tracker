@@ -41,7 +41,8 @@ class HealthConnectMigrationTest {
                 "INSERT INTO sleep (start_date, stop_date, rating, comment, wakes) " +
                     "VALUES (1000, 2000, 4, 'one', 1), (3000, 4000, 5, 'two', 2)"
             )
-        }.close()
+        }
+            .close()
     }
 
     @After
@@ -53,9 +54,10 @@ class HealthConnectMigrationTest {
     fun testMigrationCreatesHealthConnectStateAndTombstones() = runBlocking {
         openHelper(5) { database -> MIGRATION_4_5.migrate(database) }.close()
 
-        val roomDatabase = Room.databaseBuilder(context, AppDatabase::class.java, databaseName)
-            .addMigrations(MIGRATION_4_5)
-            .build()
+        val roomDatabase =
+            Room.databaseBuilder(context, AppDatabase::class.java, databaseName)
+                .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                .build()
         try {
             val sleeps = roomDatabase.sleepDao().getAll()
             assertEquals(2, sleeps.size)
@@ -64,10 +66,11 @@ class HealthConnectMigrationTest {
             assertEquals(0, sleeps[0].healthConnectVersion)
             assertEquals(-1, sleeps[0].healthConnectSyncedVersion)
 
-            val deletion = HealthConnectDeletion().apply {
-                healthConnectId = sleeps[0].healthConnectId
-                start = sleeps[0].start
-            }
+            val deletion =
+                HealthConnectDeletion().apply {
+                    healthConnectId = sleeps[0].healthConnectId
+                    start = sleeps[0].start
+                }
             roomDatabase.healthConnectDao().insertDeletions(listOf(deletion))
             assertEquals(listOf(deletion), roomDatabase.healthConnectDao().getDeletions())
         } finally {
@@ -77,27 +80,30 @@ class HealthConnectMigrationTest {
 
     private fun openHelper(
         version: Int,
-        onOpen: (SupportSQLiteDatabase) -> Unit
+        onOpen: (SupportSQLiteDatabase) -> Unit,
     ): SupportSQLiteOpenHelper {
-        val callback = object : SupportSQLiteOpenHelper.Callback(version) {
-            override fun onCreate(db: SupportSQLiteDatabase) {
-                onOpen(db)
-            }
+        val callback =
+            object : SupportSQLiteOpenHelper.Callback(version) {
+                override fun onCreate(db: SupportSQLiteDatabase) {
+                    onOpen(db)
+                }
 
-            override fun onUpgrade(
-                db: SupportSQLiteDatabase,
-                oldVersion: Int,
-                newVersion: Int
-            ) {
-                onOpen(db)
+                override fun onUpgrade(
+                    db: SupportSQLiteDatabase,
+                    oldVersion: Int,
+                    newVersion: Int,
+                ) {
+                    onOpen(db)
+                }
             }
-        }
-        return FrameworkSQLiteOpenHelperFactory().create(
-            SupportSQLiteOpenHelper.Configuration.builder(context)
-                .name(databaseName)
-                .callback(callback)
-                .build()
-        ).also { it.writableDatabase }
+        return FrameworkSQLiteOpenHelperFactory()
+            .create(
+                SupportSQLiteOpenHelper.Configuration.builder(context)
+                    .name(databaseName)
+                    .callback(callback)
+                    .build()
+            )
+            .also { it.writableDatabase }
     }
 }
 

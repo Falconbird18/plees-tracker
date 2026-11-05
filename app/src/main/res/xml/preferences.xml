@@ -1,127 +1,222 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version='1.0' encoding='utf-8'?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-
-    <PreferenceCategory android:title="@string/settings_category_theme">
-        <SwitchPreference
-            android:defaultValue="true"
-            android:disableDependentsState="true"
-            android:key="follow_system_theme"
-            android:title="@string/settings_follow_system_theme" />
-        <SwitchPreference
-            android:defaultValue="false"
-            android:dependency="follow_system_theme"
-            android:key="dark_mode"
-            android:title="@string/settings_enable_dark_theme" />
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        android:key="backup_destinations_category"
-        android:title="@string/settings_category_backup">
-        <!-- Master switch: when off, on-change and daily backups stop running for all configured
+  <PreferenceCategory android:title="@string/sensor_category" app:iconSpaceReserved="false">
+    <ListPreference
+        android:key="sensor_mode"
+        android:title="@string/sensor_mode_title"
+        android:entries="@array/sensor_modes"
+        android:entryValues="@array/sensor_mode_values"
+        android:defaultValue="motion"
+        app:iconSpaceReserved="false"
+        app:useSimpleSummaryProvider="true"
+        app:singleLineTitle="false"/>
+    <Preference
+        android:title="@string/stage_title"
+        android:summary="@string/stage_explanation"
+        android:selectable="false"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"/>
+  </PreferenceCategory>
+  <PreferenceCategory
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false"
+      android:title="@string/settings_category_theme">
+    <Preference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:key="replay_intro"
+        android:title="@string/replay_intro"/>
+    <ListPreference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:key="expressive_palette"
+        android:title="@string/palette_title"
+        android:entries="@array/palette_names"
+        android:entryValues="@array/palette_values"
+        android:defaultValue="system"
+        app:useSimpleSummaryProvider="true"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="true"
+        android:disableDependentsState="true"
+        android:key="follow_system_theme"
+        android:title="@string/settings_follow_system_theme"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:dependency="follow_system_theme"
+        android:key="dark_mode"
+        android:title="@string/settings_enable_dark_theme"/>
+  </PreferenceCategory>
+  <PreferenceCategory
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false"
+      android:key="backup_destinations_category"
+      android:title="@string/settings_category_backup">
+    <!-- Master switch: when off, on-change and daily backups stop running for all configured
              destinations and the destination rows below are disabled. Toggling it on with no
              destinations configured starts the add-destination flow; it turns itself back off
              when the last destination is removed (see Preferences.setupBackupPreferences). -->
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="automatic_backup"
-            android:order="-1"
-            android:summaryOff="@string/settings_automatic_backup_off"
-            android:title="@string/settings_automatic_backup" />
-        <!-- Configured destination rows are added here programmatically in Preferences.kt with
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="automatic_backup"
+        android:order="-1"
+        android:summaryOff="@string/settings_automatic_backup_off"
+        android:title="@string/settings_automatic_backup"/>
+    <!-- Configured destination rows are added here programmatically in Preferences.kt with
              order 0..n, so the static items get high explicit orders to always sort after them. -->
-        <Preference
-            android:dependency="automatic_backup"
-            android:key="add_backup_destination"
-            android:order="100"
-            android:title="@string/settings_add_backup_destination" />
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="pretty_backup"
-            android:order="101"
-            android:title="@string/settings_pretty_backup" />
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        android:key="health_connect_category"
-        android:title="@string/settings_health_connect_category" />
-
-    <PreferenceCategory android:title="@string/settings_category_dashboard">
-        <ListPreference
-            android:key="dashboard_duration"
-            android:title="@string/settings_dashboard_duration"
-            android:entries="@array/duration_entries"
-            android:entryValues="@array/duration_entry_values"
-            android:defaultValue="-7"
-            app:useSimpleSummaryProvider="true" />
-        <ListPreference
-            android:key="ideal_sleep_length"
-            android:title="@string/settings_ideal_sleep_length"
-            android:entries="@array/ideal_sleep_entries"
-            android:entryValues="@array/ideal_sleep_entry_values"
-            android:defaultValue="8.0"
-            app:useSimpleSummaryProvider="true" />
-        <ListPreference
-            android:key="sleep_start_delta"
-            android:title="@string/settings_sleep_start_delta"
-            android:entries="@array/sleep_start_delay_entries"
-            android:entryValues="@array/sleep_start_delay_entry_values"
-            android:defaultValue="0.0"
-            app:useSimpleSummaryProvider="true" />
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="compact_view"
-            android:title="@string/settings_compact_view" />
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="show_average_sleep_durations"
-            android:title="@string/show_average_of_sleep_duration" />
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="show_average_daily_sums"
-            android:title="@string/show_averege_of_daily_sums" />
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="ignore_empty_days"
-            android:title="@string/ignore_empty_days" />
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="use_median"
-            android:title="@string/use_median" />
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="@string/past_sleeps">
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="show_awake_for"
-            android:title="@string/show_awake_duration" />
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="show_rating"
-            android:title="@string/show_rating" />
-    </PreferenceCategory>
-    <PreferenceCategory
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:title="@string/settings_reminders">
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="daily_reminder"
-            android:title="@string/settings_daily_reminder" />
-        <Preference
-            android:key="wakeup"
-            android:title="@string/settings_wakeup" />
-        <Preference
-            android:key="bedtime"
-            android:title="@string/settings_bedtime" />
-    </PreferenceCategory>
-    <PreferenceCategory
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:title="@string/settings_etc">
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="enable_dnd"
-            android:title="@string/settings_enable_dnd" />
-    </PreferenceCategory>
+    <Preference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:dependency="automatic_backup"
+        android:key="add_backup_destination"
+        android:order="100"
+        android:title="@string/settings_add_backup_destination"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="pretty_backup"
+        android:order="101"
+        android:title="@string/settings_pretty_backup"/>
+  </PreferenceCategory>
+  <PreferenceCategory
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false"
+      android:key="health_connect_category"
+      android:title="@string/settings_health_connect_category"/>
+  <PreferenceCategory
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false"
+      android:title="@string/settings_category_dashboard">
+    <ListPreference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:key="dashboard_duration"
+        android:title="@string/settings_dashboard_duration"
+        android:entries="@array/duration_entries"
+        android:entryValues="@array/duration_entry_values"
+        android:defaultValue="-7"
+        app:useSimpleSummaryProvider="true"/>
+    <ListPreference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:key="ideal_sleep_length"
+        android:title="@string/settings_ideal_sleep_length"
+        android:entries="@array/ideal_sleep_entries"
+        android:entryValues="@array/ideal_sleep_entry_values"
+        android:defaultValue="8.0"
+        app:useSimpleSummaryProvider="true"/>
+    <ListPreference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:key="sleep_start_delta"
+        android:title="@string/settings_sleep_start_delta"
+        android:entries="@array/sleep_start_delay_entries"
+        android:entryValues="@array/sleep_start_delay_entry_values"
+        android:defaultValue="0.0"
+        app:useSimpleSummaryProvider="true"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="true"
+        android:key="compact_view"
+        android:title="@string/settings_compact_view"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="show_average_sleep_durations"
+        android:title="@string/show_average_of_sleep_duration"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="true"
+        android:key="show_average_daily_sums"
+        android:title="@string/show_averege_of_daily_sums"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="true"
+        android:key="ignore_empty_days"
+        android:title="@string/ignore_empty_days"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="use_median"
+        android:title="@string/use_median"/>
+  </PreferenceCategory>
+  <PreferenceCategory
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false"
+      android:title="@string/past_sleeps">
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="show_awake_for"
+        android:title="@string/show_awake_duration"/>
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="show_rating"
+        android:title="@string/show_rating"/>
+  </PreferenceCategory>
+  <PreferenceCategory
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:title="@string/settings_reminders">
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="daily_reminder"
+        android:title="@string/settings_daily_reminder"/>
+    <Preference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:key="wakeup"
+        android:title="@string/settings_wakeup"/>
+    <Preference
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:key="bedtime"
+        android:title="@string/settings_bedtime"/>
+  </PreferenceCategory>
+  <PreferenceCategory
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:title="@string/settings_etc">
+    <SwitchPreferenceCompat
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        android:widgetLayout="@layout/preference_material_switch"
+        android:defaultValue="false"
+        android:key="enable_dnd"
+        android:title="@string/settings_enable_dnd"/>
+  </PreferenceCategory>
 </PreferenceScreen>
-

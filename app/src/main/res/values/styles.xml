@@ -1,13 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.DarkActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="colorSurface">@color/colorSurface</item>
-        <item name="android:windowBackground">@color/colorBackground</item>
-    </style>
-
+  <style name="AppTheme" parent="Theme.Material3Expressive.DayNight">
+    <item name="android:fontFamily">sans-serif</item>
+    <item name="colorPrimary">@color/plees_primary</item>
+    <item name="colorOnPrimary">@color/plees_on_primary</item>
+    <item name="colorPrimaryContainer">@color/plees_container</item>
+    <item name="colorOnPrimaryContainer">@color/plees_on_container</item>
+    <item name="colorSecondaryContainer">@color/plees_secondary</item>
+    <item name="colorOnSecondaryContainer">@color/plees_on_secondary</item>
+    <item name="colorTertiaryContainer">@color/plees_tertiary</item>
+    <item name="colorOnTertiaryContainer">@color/plees_on_tertiary</item>
+    <item name="colorSurface">@color/plees_surface</item>
+    <item name="colorOnSurface">@color/plees_on_surface</item>
+    <item name="colorSurfaceContainer">@color/plees_surface_container</item>
+    <item name="android:colorBackground">@color/plees_surface</item>
+    <item name="android:windowBackground">?attr/colorSurface</item>
+    <item name="colorAccent">?attr/colorPrimary</item>
+    <item name="android:windowLightStatusBar">@bool/plees_light</item>
+  </style>
+  <style name="ThemeOverlay.Plees.Coral" parent="">
+    <item name="colorPrimary">@color/coral_primary</item>
+    <item name="colorPrimaryContainer">@color/coral_container</item>
+    <item name="colorOnPrimaryContainer">@color/coral_on_container</item>
+  </style>
+  <style name="ThemeOverlay.Plees.Ocean" parent="">
+    <item name="colorPrimary">@color/ocean_primary</item>
+    <item name="colorPrimaryContainer">@color/ocean_container</item>
+    <item name="colorOnPrimaryContainer">@color/ocean_on_container</item>
+  </style>
+  <style name="Plees.Title" parent="TextAppearance.Material3.HeadlineLarge">
+    <item name="android:fontFamily">sans-serif-rounded</item>
+    <item name="android:textStyle">bold</item>
+  </style>
+  <style name="Plees.Card" parent="Widget.Material3.CardView.Filled">
+    <item name="shapeAppearanceOverlay">@style/Plees.Shape</item>
+    <item name="cardElevation">0dp</item>
+  </style>
+  <style name="Plees.Shape" parent="">
+    <item name="cornerFamily">rounded</item>
+    <item name="cornerSize">28dp</item>
+  </style>
+  <style name="AppTheme.Main" parent="AppTheme">
+    <item name="windowActionBar">false</item>
+    <item name="windowNoTitle">true</item>
+  </style>
 </resources>

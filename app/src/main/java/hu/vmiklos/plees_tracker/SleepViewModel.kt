@@ -6,8 +6,6 @@
 
 package hu.vmiklos.plees_tracker
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.content.ContentResolver
 import android.content.Context
 import android.text.format.DateFormat
@@ -17,13 +15,15 @@ import android.widget.Toast
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.TimeZone
 import kotlinx.coroutines.launch
 
-/**
- * This is the view model of SleepActivity, providing coroutine scopes.
- */
+/** This is the view model of SleepActivity, providing coroutine scopes. */
 class SleepViewModel : ViewModel() {
 
     private var sleepCommentCallback: SleepCommentCallback? = null
@@ -33,6 +33,7 @@ class SleepViewModel : ViewModel() {
         val viewModel = this
         viewModelScope.launch {
             val sleep = DataModel.getSleepById(sid)
+            activity.findViewById<StageSummaryView>(R.id.sleep_stages).showSleep(sleep)
 
             val startDate = activity.findViewById<TextView>(R.id.sleep_start_date)
             val compactView = DataModel.getCompactView()
@@ -45,9 +46,13 @@ class SleepViewModel : ViewModel() {
             stopTime.text = DataModel.formatDateTime(Date(sleep.stop), true, compactView)
             val rating = activity.findViewById<RatingBar>(R.id.sleep_item_rating)
             rating.rating = sleep.rating.toFloat()
-            rating.onRatingBarChangeListener = SleepRateCallback(
-                viewModel, sleep, activity.applicationContext, activity.contentResolver
-            )
+            rating.onRatingBarChangeListener =
+                SleepRateCallback(
+                    viewModel,
+                    sleep,
+                    activity.applicationContext,
+                    activity.contentResolver,
+                )
             val comment = activity.findViewById<AppCompatEditText>(R.id.sleep_item_comment)
             viewModel.sleepCommentCallback?.let {
                 comment.removeTextChangedListener(it)
@@ -71,33 +76,34 @@ class SleepViewModel : ViewModel() {
         sid: Int,
         isStart: Boolean,
         context: Context,
-        cr: ContentResolver
+        cr: ContentResolver,
     ) {
         viewModelScope.launch {
             val sleep = DataModel.getSleepById(sid)
             val dateTime = Calendar.getInstance()
             dateTime.time = if (isStart) Date(sleep.start) else Date(sleep.stop)
 
-            DatePickerDialog(
-                activity,
-                { _/*view*/, year, monthOfYear, dayOfMonth ->
-                    dateTime.set(year, monthOfYear, dayOfMonth)
-                    if (isStart) {
-                        sleep.start = dateTime.time.time
-                    } else {
-                        sleep.stop = dateTime.time.time
-                    }
-                    if (sleep.start < sleep.stop) {
-                        updateSleep(activity, sleep, context, cr)
-                    } else {
-                        val text = context.getString(R.string.negative_duration)
-                        val duration = Toast.LENGTH_SHORT
-                        val toast = Toast.makeText(context, text, duration)
-                        toast.show()
-                    }
-                },
-                dateTime[Calendar.YEAR], dateTime[Calendar.MONTH], dateTime[Calendar.DATE]
-            ).show()
+            // MaterialDatePicker represents dates at UTC midnight; retain the local clock time.
+            val selection =
+                Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                    clear()
+                    set(dateTime[Calendar.YEAR], dateTime[Calendar.MONTH], dateTime[Calendar.DATE])
+                }
+            val picker =
+                MaterialDatePicker.Builder.datePicker()
+                    .setTitleText(if (isStart) R.string.started_on else R.string.stopped_on)
+                    .setSelection(selection.timeInMillis)
+                    .build()
+            picker.addOnPositiveButtonClickListener { value ->
+                val chosen =
+                    Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = value }
+                dateTime.set(chosen[Calendar.YEAR], chosen[Calendar.MONTH], chosen[Calendar.DATE])
+                if (isStart) sleep.start = dateTime.timeInMillis
+                else sleep.stop = dateTime.timeInMillis
+                if (sleep.start < sleep.stop) updateSleep(activity, sleep, context, cr)
+                else Toast.makeText(context, R.string.negative_duration, Toast.LENGTH_SHORT).show()
+            }
+            picker.show(activity.supportFragmentManager, "sleep_date")
         }
     }
 
@@ -106,35 +112,33 @@ class SleepViewModel : ViewModel() {
         sid: Int,
         isStart: Boolean,
         context: Context,
-        cr: ContentResolver
+        cr: ContentResolver,
     ) {
         viewModelScope.launch {
             val sleep = DataModel.getSleepById(sid)
             val dateTime = Calendar.getInstance()
             dateTime.time = if (isStart) Date(sleep.start) else Date(sleep.stop)
 
-            TimePickerDialog(
-                activity,
-                { _/*view*/, hourOfDay, minute ->
-                    dateTime[Calendar.HOUR_OF_DAY] = hourOfDay
-                    dateTime[Calendar.MINUTE] = minute
-                    if (isStart) {
-                        sleep.start = dateTime.time.time
-                    } else {
-                        sleep.stop = dateTime.time.time
-                    }
-                    if (sleep.start < sleep.stop) {
-                        updateSleep(activity, sleep, context, cr)
-                    } else {
-                        val text = context.getString(R.string.negative_duration)
-                        val duration = Toast.LENGTH_SHORT
-                        val toast = Toast.makeText(context, text, duration)
-                        toast.show()
-                    }
-                },
-                dateTime[Calendar.HOUR_OF_DAY], dateTime[Calendar.MINUTE],
-                /*is24HourView=*/DateFormat.is24HourFormat(activity)
-            ).show()
+            val picker =
+                MaterialTimePicker.Builder()
+                    .setTitleText(if (isStart) R.string.started_on else R.string.stopped_on)
+                    .setHour(dateTime[Calendar.HOUR_OF_DAY])
+                    .setMinute(dateTime[Calendar.MINUTE])
+                    .setTimeFormat(
+                        if (DateFormat.is24HourFormat(activity)) TimeFormat.CLOCK_24H
+                        else TimeFormat.CLOCK_12H
+                    )
+                    .setInputMode(MaterialTimePicker.INPUT_MODE_KEYBOARD)
+                    .build()
+            picker.addOnPositiveButtonClickListener {
+                dateTime.set(Calendar.HOUR_OF_DAY, picker.hour)
+                dateTime.set(Calendar.MINUTE, picker.minute)
+                if (isStart) sleep.start = dateTime.timeInMillis
+                else sleep.stop = dateTime.timeInMillis
+                if (sleep.start < sleep.stop) updateSleep(activity, sleep, context, cr)
+                else Toast.makeText(context, R.string.negative_duration, Toast.LENGTH_SHORT).show()
+            }
+            picker.show(activity.supportFragmentManager, "sleep_time")
         }
     }
 
@@ -142,7 +146,7 @@ class SleepViewModel : ViewModel() {
         activity: SleepActivity,
         sleep: Sleep,
         context: Context,
-        cr: ContentResolver
+        cr: ContentResolver,
     ) {
         viewModelScope.launch {
             DataModel.updateSleep(sleep)

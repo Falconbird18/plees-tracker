@@ -9,7 +9,6 @@ package hu.vmiklos.plees_tracker
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import java.util.Calendar
 
@@ -17,7 +16,7 @@ import java.util.Calendar
  * This activity provides additional stats for a limited period of time. This is in contrast with
  * the main activity, which considers all sleeps within the specified duration.
  */
-class StatsActivity : AppCompatActivity() {
+class StatsActivity : ExpressiveActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,11 +27,9 @@ class StatsActivity : AppCompatActivity() {
 
         title = getString(R.string.stats)
         // Show a back button.
-        actionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        DataModel.sleepsLive.observe(
-            this
-        ) { sleeps ->
+        DataModel.sleepsLive.observe(this) { sleeps ->
             if (sleeps != null) {
                 val fragments = supportFragmentManager
 
@@ -78,12 +75,13 @@ class StatsActivity : AppCompatActivity() {
         val average = view?.findViewById<TextView>(R.id.fragment_stats_average)
         average?.text = DataModel.getSleepDurationStat(sleeps, DataModel.getCompactView())
         val daily = view?.findViewById<TextView>(R.id.fragment_stats_daily)
-        daily?.text = DataModel.getSleepDurationDailyStat(
-            sleeps,
-            DataModel.getCompactView(),
-            DataModel.getIgnoreEmptyDays(),
-            DataModel.getStatFunction()
-        )
+        daily?.text =
+            DataModel.getSleepDurationDailyStat(
+                sleeps,
+                DataModel.getCompactView(),
+                DataModel.getIgnoreEmptyDays(),
+                DataModel.getStatFunction(),
+            )
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

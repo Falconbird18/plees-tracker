@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:id="@+id/nav_sleep" android:icon="@drawable/ic_moon" android:title="@string/sleep_tab"/>
+  <item
+      android:id="@+id/nav_statistics"
+      android:icon="@drawable/ic_insights"
+      android:title="@string/statistics_tab"/>
+</menu>

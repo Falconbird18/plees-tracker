@@ -6,7 +6,6 @@
 
 package hu.vmiklos.plees_tracker
 
-import android.app.TimePickerDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
@@ -20,12 +19,13 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.health.connect.client.HealthConnectClient
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -34,7 +34,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-class PreferencesActivity : AppCompatActivity() {
+class PreferencesActivity : ExpressiveActivity() {
     companion object {
         private const val TAG = "PreferencesActivity"
         private const val STATE_ADD_DRIVE_AFTER_FOLDER = "addDriveAfterFolder"
@@ -88,6 +88,7 @@ class PreferencesActivity : AppCompatActivity() {
     // process recreation; the actual read job runs only while this settings activity is started.
     internal var healthConnectCheckPending = false
         private set
+
     private var healthConnectCheckJob: Job? = null
     private var healthConnectCheckGeneration = 0
     private var healthConnectImportDialogShowing = false
@@ -103,28 +104,29 @@ class PreferencesActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            healthPermissionLauncher = registerForActivityResult(
-                HealthConnectBackend.permissionContract()
-            ) { granted ->
-                HealthConnectBackend.localPreferences(applicationContext).edit {
-                    putBoolean(HealthConnectBackend.PERMISSION_REQUESTED_KEY, true)
+            healthPermissionLauncher =
+                registerForActivityResult(HealthConnectBackend.permissionContract()) { granted ->
+                    HealthConnectBackend.localPreferences(applicationContext).edit {
+                        putBoolean(HealthConnectBackend.PERMISSION_REQUESTED_KEY, true)
+                    }
+                    if (granted.containsAll(HealthConnectBackend.requestedPermissions())) {
+                        healthConnectPermissionKnownGranted = true
+                        completeHealthConnectEnable()
+                    } else {
+                        refreshFragment()
+                        showHealthConnectPermissionDeniedDialog()
+                    }
                 }
-                if (granted.containsAll(HealthConnectBackend.requestedPermissions())) {
-                    healthConnectPermissionKnownGranted = true
-                    completeHealthConnectEnable()
-                } else {
-                    refreshFragment()
-                    showHealthConnectPermissionDeniedDialog()
-                }
-            }
         }
         savedInstanceState?.let { state ->
             addDriveAfterFolder = state.getBoolean(STATE_ADD_DRIVE_AFTER_FOLDER)
-            replaceFolderOnSignIn = state.getString(STATE_REPLACE_FOLDER_ON_SIGN_IN)
-                ?.let { BackupDestination.LocalFolder(it) }
+            replaceFolderOnSignIn =
+                state.getString(STATE_REPLACE_FOLDER_ON_SIGN_IN)?.let {
+                    BackupDestination.LocalFolder(it)
+                }
             replaceDriveOnFolderPicked = state.getString(STATE_REPLACE_DRIVE_ON_FOLDER_PICKED)
-            changePathFrom = state.getString(STATE_CHANGE_PATH_FROM)
-                ?.let { BackupDestination.LocalFolder(it) }
+            changePathFrom =
+                state.getString(STATE_CHANGE_PATH_FROM)?.let { BackupDestination.LocalFolder(it) }
             val email = state.getString(STATE_CHANGE_ACCOUNT_EMAIL)
             val frequency = state.getString(STATE_CHANGE_ACCOUNT_FREQUENCY)
             if (email != null && frequency != null) {
@@ -133,22 +135,21 @@ class PreferencesActivity : AppCompatActivity() {
             authorizeEmail = state.getString(STATE_AUTHORIZE_EMAIL)
             healthSettingsPending = state.getBoolean(STATE_HEALTH_SETTINGS_PENDING)
         }
-        val persistedCheckPending = HealthConnectBackend.localPreferences(applicationContext)
-            .getBoolean(HealthConnectBackend.CHECK_PENDING_KEY, false)
-        healthConnectCheckPending = savedInstanceState?.getBoolean(
+        val persistedCheckPending =
+            HealthConnectBackend.localPreferences(applicationContext)
+                .getBoolean(HealthConnectBackend.CHECK_PENDING_KEY, false)
+        healthConnectCheckPending =
+            savedInstanceState?.getBoolean(
             STATE_HEALTH_CHECK_PENDING,
-            persistedCheckPending
+            persistedCheckPending,
         ) ?: persistedCheckPending
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.root, Preferences())
-            .commit()
+        supportFragmentManager.beginTransaction().replace(R.id.root, Preferences()).commit()
         setContentView(R.layout.activity_settings)
 
         DataModel.handleWindowInsets(this)
 
         // Show a back button.
-        actionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         DataModel.preferencesActivity = this
     }
@@ -166,8 +167,9 @@ class PreferencesActivity : AppCompatActivity() {
             return
         }
         lifecycleScope.launch {
-            val requested = HealthConnectBackend.localPreferences(applicationContext)
-                .getBoolean(HealthConnectBackend.PERMISSION_REQUESTED_KEY, false)
+            val requested =
+                HealthConnectBackend.localPreferences(applicationContext)
+                    .getBoolean(HealthConnectBackend.PERMISSION_REQUESTED_KEY, false)
             if (!requested) {
                 healthPermissionLauncher?.launch(HealthConnectBackend.requestedPermissions())
                 return@launch
@@ -271,53 +273,56 @@ class PreferencesActivity : AppCompatActivity() {
         val generation = ++healthConnectCheckGeneration
         healthConnectCheckJob = lifecycleScope.launch {
             try {
-                while (isActive &&
+                while (
+                    isActive &&
                     healthConnectCheckPending &&
                     generation == healthConnectCheckGeneration
                 ) {
-                    val previous = try {
-                        withTimeout(HEALTH_CONNECT_READ_TIMEOUT_MS) {
-                            DataModel.healthConnectImportCandidates(
-                                HealthConnectBackend.previousSleeps(applicationContext)
+                    val previous =
+                        try {
+                            withTimeout(HEALTH_CONNECT_READ_TIMEOUT_MS) {
+                                DataModel.healthConnectImportCandidates(
+                                    HealthConnectBackend.previousSleeps(applicationContext)
+                                )
+                            }
+                        } catch (e: SecurityException) {
+                            Log.e(TAG, "Health Connect permission lost during history check: $e")
+                            healthConnectPermissionKnownGranted = false
+                            stopHealthConnectHistoryCheck(cancelJob = false)
+                            HealthConnectBackend.localPreferences(applicationContext).edit {
+                                putBoolean(HealthConnectBackend.ENABLED_KEY, false)
+                                putBoolean(HealthConnectBackend.INITIALIZED_KEY, false)
+                            }
+                            refreshFragment()
+                            showHealthConnectPermissionDeniedDialog()
+                            return@launch
+                        } catch (e: TimeoutCancellationException) {
+                            Log.e(
+                                TAG,
+                                "Health Connect history check timed out after " +
+                                    "$HEALTH_CONNECT_READ_TIMEOUT_MS ms; retrying",
                             )
+                            delay(healthConnectRetryDelayMs)
+                            healthConnectRetryDelayMs =
+                                (healthConnectRetryDelayMs * 2).coerceAtMost(
+                                    HEALTH_CONNECT_RETRY_MAX_DELAY_MS
+                                )
+                            continue
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // Quota and provider failures are transient. Keep the pending state
+                            // visible
+                            // and retry only while this activity remains in the foreground.
+                            Log.e(TAG, "Health Connect history check failed; retrying: $e")
+                            delay(healthConnectRetryDelayMs)
+                            healthConnectRetryDelayMs =
+                                (healthConnectRetryDelayMs * 2).coerceAtMost(
+                                    HEALTH_CONNECT_RETRY_MAX_DELAY_MS
+                                )
+                            continue
                         }
-                    } catch (e: SecurityException) {
-                        Log.e(TAG, "Health Connect permission lost during history check: $e")
-                        healthConnectPermissionKnownGranted = false
-                        stopHealthConnectHistoryCheck(cancelJob = false)
-                        HealthConnectBackend.localPreferences(applicationContext).edit {
-                            putBoolean(HealthConnectBackend.ENABLED_KEY, false)
-                            putBoolean(HealthConnectBackend.INITIALIZED_KEY, false)
-                        }
-                        refreshFragment()
-                        showHealthConnectPermissionDeniedDialog()
-                        return@launch
-                    } catch (e: TimeoutCancellationException) {
-                        Log.e(
-                            TAG,
-                            "Health Connect history check timed out after " +
-                                "$HEALTH_CONNECT_READ_TIMEOUT_MS ms; retrying"
-                        )
-                        delay(healthConnectRetryDelayMs)
-                        healthConnectRetryDelayMs = (healthConnectRetryDelayMs * 2).coerceAtMost(
-                            HEALTH_CONNECT_RETRY_MAX_DELAY_MS
-                        )
-                        continue
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Quota and provider failures are transient. Keep the pending state visible
-                        // and retry only while this activity remains in the foreground.
-                        Log.e(TAG, "Health Connect history check failed; retrying: $e")
-                        delay(healthConnectRetryDelayMs)
-                        healthConnectRetryDelayMs = (healthConnectRetryDelayMs * 2).coerceAtMost(
-                            HEALTH_CONNECT_RETRY_MAX_DELAY_MS
-                        )
-                        continue
-                    }
-                    if (!healthConnectCheckPending ||
-                        generation != healthConnectCheckGeneration
-                    ) {
+                    if (!healthConnectCheckPending || generation != healthConnectCheckGeneration) {
                         return@launch
                     }
                     if (previous.isNotEmpty()) {
@@ -384,30 +389,32 @@ class PreferencesActivity : AppCompatActivity() {
         }
         healthConnectImportDialogShowing = true
         val canReadAllHistory = HealthConnectBackend.canReadAllHistory(applicationContext)
-        val message = if (canReadAllHistory) {
-            R.plurals.health_connect_import_message_all_history
-        } else {
-            R.plurals.health_connect_import_message
-        }
-        val builder = AlertDialog.Builder(this)
-            .setTitle(R.string.health_connect_import_title)
-            .setMessage(
-                resources.getQuantityString(
-                    message,
-                    sleeps.size,
-                    sleeps.size
+        val message =
+            if (canReadAllHistory) {
+                R.plurals.health_connect_import_message_all_history
+            } else {
+                R.plurals.health_connect_import_message
+            }
+        val builder =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.health_connect_import_title)
+                .setMessage(
+                    resources.getQuantityString(
+                        message,
+                        sleeps.size,
+                        sleeps.size,
+                    )
                 )
-            )
-            .setPositiveButton(R.string.health_connect_import) { _, _ ->
-                lifecycleScope.launch {
-                    DataModel.importHealthConnectSleeps(sleeps)
+                .setPositiveButton(R.string.health_connect_import) { _, _ ->
+                    lifecycleScope.launch {
+                        DataModel.importHealthConnectSleeps(sleeps)
+                        finishHealthConnectEnable()
+                    }
+                }
+                .setNegativeButton(R.string.health_connect_skip) { _, _ ->
                     finishHealthConnectEnable()
                 }
-            }
-            .setNegativeButton(R.string.health_connect_skip) { _, _ ->
-                finishHealthConnectEnable()
-            }
-            .setCancelable(false)
+                .setCancelable(false)
         if (canReadAllHistory) {
             builder.setNeutralButton(R.string.health_connect_wipe, null)
         }
@@ -425,10 +432,11 @@ class PreferencesActivity : AppCompatActivity() {
             wipeButton.isEnabled = false
             lifecycleScope.launch {
                 for (remaining in HEALTH_CONNECT_WIPE_DELAY_SECONDS downTo 1) {
-                    wipeButton.text = getString(
-                        R.string.health_connect_wipe_countdown,
-                        remaining
-                    )
+                    wipeButton.text =
+                        getString(
+                            R.string.health_connect_wipe_countdown,
+                            remaining,
+                        )
                     delay(1000)
                     if (!dialog.isShowing) {
                         return@launch
@@ -443,7 +451,8 @@ class PreferencesActivity : AppCompatActivity() {
                 wipeButton.isEnabled = false
                 lifecycleScope.launch {
                     val work = HealthConnectBackend.scheduleWipe(applicationContext)
-                    if (work != null &&
+                    if (
+                        work != null &&
                         HealthConnectBackend.awaitSuccess(applicationContext, work) == true
                     ) {
                         dialog.dismiss()
@@ -471,7 +480,8 @@ class PreferencesActivity : AppCompatActivity() {
         }
         forceHealthConnectSync(showResult = false)
         lifecycleScope.launch {
-            if (DataModel.hasSleeps() ||
+            if (
+                DataModel.hasSleeps() ||
                 DataModel.database.healthConnectDao().getDeletions().isNotEmpty()
             ) {
                 HealthConnectBackend.scheduleSync(applicationContext)
@@ -551,7 +561,8 @@ class PreferencesActivity : AppCompatActivity() {
                 }
             } else {
                 val preferences = HealthConnectBackend.localPreferences(applicationContext)
-                if (preferences.getBoolean(HealthConnectBackend.ENABLED_KEY, false) &&
+                if (
+                    preferences.getBoolean(HealthConnectBackend.ENABLED_KEY, false) &&
                     !preferences.getBoolean(HealthConnectBackend.INITIALIZED_KEY, false)
                 ) {
                     completeHealthConnectEnable()
@@ -574,8 +585,9 @@ class PreferencesActivity : AppCompatActivity() {
             var added = false
             try {
                 result.data?.data?.let { uri ->
-                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    val flags =
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     contentResolver.takePersistableUriPermission(uri, flags)
                     val newDest = BackupDestination.LocalFolder(uri.toString())
                     if (changeFrom != null) {
@@ -656,8 +668,8 @@ class PreferencesActivity : AppCompatActivity() {
     /** Gives back the persisted permission grant of a no longer used folder destination. */
     private fun releaseFolderPermission(path: String) {
         try {
-            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            val flags =
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             contentResolver.releasePersistableUriPermission(Uri.parse(path), flags)
         } catch (e: Exception) {
             Log.e(TAG, "releaseFolderPermission: $e")
@@ -676,7 +688,9 @@ class PreferencesActivity : AppCompatActivity() {
                         DriveSignInResult.Failed
                     } else {
                         DriveBackend.handleAuthorizationResult(
-                            applicationContext, email, result.data
+                            applicationContext,
+                            email,
+                            result.data,
                         )
                     }
                 )
@@ -718,19 +732,20 @@ class PreferencesActivity : AppCompatActivity() {
         val replaceFolder = replaceFolderOnSignIn
         replaceFolderOnSignIn = null
         when (signIn) {
-            is DriveSignInResult.Success -> if (changeFrom != null) {
-                applyAccountChange(changeFrom, signIn.email)
-            } else {
-                addDriveDestination(signIn.email)
-                toast(R.string.drive_sign_in_success)
-                if (replaceFolder != null) {
-                    // "Instead of the device folder": Drive is in place, retire the
-                    // folder destination and offer to clean up its backup file.
-                    DataModel.removeDestination(replaceFolder)
-                    releaseFolderPermission(replaceFolder.path)
-                    confirmDeleteRetiredFolderBackup(replaceFolder)
+            is DriveSignInResult.Success ->
+                if (changeFrom != null) {
+                    applyAccountChange(changeFrom, signIn.email)
+                } else {
+                    addDriveDestination(signIn.email)
+                    toast(R.string.drive_sign_in_success)
+                    if (replaceFolder != null) {
+                        // "Instead of the device folder": Drive is in place, retire the
+                        // folder destination and offer to clean up its backup file.
+                        DataModel.removeDestination(replaceFolder)
+                        releaseFolderPermission(replaceFolder.path)
+                        confirmDeleteRetiredFolderBackup(replaceFolder)
+                    }
                 }
-            }
             // Backing out of the flow is a deliberate choice, not an error.
             DriveSignInResult.Cancelled -> {}
             DriveSignInResult.Failed -> toast(R.string.drive_sign_in_failure)
@@ -741,9 +756,10 @@ class PreferencesActivity : AppCompatActivity() {
     private fun addDriveDestination(email: String) {
         // The result can arrive twice for the same account, e.g. when the activity was
         // recreated while the picker was open: don't create a duplicate destination then.
-        val alreadyConfigured = DataModel.getDestinations()
-            .filterIsInstance<BackupDestination.DriveAccount>()
-            .any { it.email == email }
+        val alreadyConfigured =
+            DataModel.getDestinations().filterIsInstance<BackupDestination.DriveAccount>().any {
+                it.email == email
+            }
         if (alreadyConfigured) {
             return
         }
@@ -753,9 +769,9 @@ class PreferencesActivity : AppCompatActivity() {
 
     /**
      * Starts the flow for adding a backup destination, phrased as a migration from the current
-     * setup. One destination of each type is supported, so: with nothing configured this shows
-     * the clean-slate "back up to" checkbox dialog (ticking both runs the folder picker first and
-     * then chains into Drive sign-in); with one type configured the remaining type is offered "in
+     * setup. One destination of each type is supported, so: with nothing configured this shows the
+     * clean-slate "back up to" checkbox dialog (ticking both runs the folder picker first and then
+     * chains into Drive sign-in); with one type configured the remaining type is offered "in
      * addition to" or "instead of" the existing one. The add row is hidden when both types are
      * configured (see [Preferences.setupBackupPreferences]).
      */
@@ -774,10 +790,11 @@ class PreferencesActivity : AppCompatActivity() {
     }
 
     private fun promptCleanSlate() {
-        val options = arrayOf(
-            getString(R.string.backup_target_folder),
-            getString(R.string.backup_target_drive)
-        )
+        val options =
+            arrayOf(
+                getString(R.string.backup_target_folder),
+                getString(R.string.backup_target_drive),
+            )
         val checked = booleanArrayOf(false, false)
         AlertDialog.Builder(this)
             .setTitle(R.string.backup_target_title)
@@ -810,10 +827,11 @@ class PreferencesActivity : AppCompatActivity() {
 
     /** A folder backup exists: offer Drive on top of it, or as its replacement. */
     private fun promptAddDriveTo(folder: BackupDestination.LocalFolder) {
-        val options = arrayOf(
-            getString(R.string.backup_drive_in_addition),
-            getString(R.string.backup_drive_instead)
-        )
+        val options =
+            arrayOf(
+                getString(R.string.backup_drive_in_addition),
+                getString(R.string.backup_drive_instead),
+            )
         AlertDialog.Builder(this)
             .setTitle(R.string.backup_to_drive_title)
             .setItems(options) { _, which ->
@@ -828,10 +846,11 @@ class PreferencesActivity : AppCompatActivity() {
 
     /** A Drive backup exists: offer a folder on top of it, or as its replacement. */
     private fun promptAddFolderTo(drive: BackupDestination.DriveAccount) {
-        val options = arrayOf(
-            getString(R.string.backup_folder_in_addition),
-            getString(R.string.backup_folder_instead)
-        )
+        val options =
+            arrayOf(
+                getString(R.string.backup_folder_in_addition),
+                getString(R.string.backup_folder_instead),
+            )
         AlertDialog.Builder(this)
             .setTitle(R.string.backup_to_folder_title)
             .setItems(options) { _, which ->
@@ -846,8 +865,7 @@ class PreferencesActivity : AppCompatActivity() {
 
     /**
      * Asks whether to also delete the backup.csv from a just-retired folder destination. Opt-in
-     * because the folder may be synchronized elsewhere (e.g. Nextcloud); declining keeps the
-     * file.
+     * because the folder may be synchronized elsewhere (e.g. Nextcloud); declining keeps the file.
      */
     private fun confirmDeleteRetiredFolderBackup(folder: BackupDestination.LocalFolder) {
         AlertDialog.Builder(this)
@@ -890,10 +908,11 @@ class PreferencesActivity : AppCompatActivity() {
     }
 
     private fun showRestoreModeDialog(email: String) {
-        val options = arrayOf(
-            getString(R.string.restore_merge),
-            getString(R.string.restore_override)
-        )
+        val options =
+            arrayOf(
+                getString(R.string.restore_merge),
+                getString(R.string.restore_override),
+            )
         AlertDialog.Builder(this)
             .setTitle(R.string.drive_restore)
             .setItems(options) { _, which -> restoreFromDrive(email, override = which == 1) }
@@ -921,10 +940,11 @@ class PreferencesActivity : AppCompatActivity() {
     }
 
     fun changeFrequency(dest: BackupDestination.DriveAccount) {
-        val options = arrayOf(
-            getString(R.string.drive_backup_frequency_daily),
-            getString(R.string.drive_backup_frequency_on_change)
-        )
+        val options =
+            arrayOf(
+                getString(R.string.drive_backup_frequency_daily),
+                getString(R.string.drive_backup_frequency_on_change),
+            )
         AlertDialog.Builder(this)
             .setTitle(R.string.drive_frequency)
             .setItems(options) { _, which ->
@@ -957,9 +977,10 @@ class PreferencesActivity : AppCompatActivity() {
             toast(R.string.drive_sign_in_success)
             return
         }
-        val alreadyConfigured = DataModel.getDestinations()
-            .filterIsInstance<BackupDestination.DriveAccount>()
-            .any { it.email == newEmail }
+        val alreadyConfigured =
+            DataModel.getDestinations().filterIsInstance<BackupDestination.DriveAccount>().any {
+                it.email == newEmail
+            }
         if (alreadyConfigured) {
             DataModel.removeDestination(old)
         } else {
@@ -974,9 +995,10 @@ class PreferencesActivity : AppCompatActivity() {
     }
 
     fun removeDriveAccount(email: String, deleteBackup: Boolean) {
-        val dest = DataModel.getDestinations()
-            .filterIsInstance<BackupDestination.DriveAccount>()
-            .firstOrNull { it.email == email } ?: return
+        val dest =
+            DataModel.getDestinations()
+                .filterIsInstance<BackupDestination.DriveAccount>()
+                .firstOrNull { it.email == email } ?: return
         lifecycleScope.launch {
             if (deleteBackup) {
                 val success = DriveBackend.delete(applicationContext, email)
@@ -1003,45 +1025,32 @@ class PreferencesActivity : AppCompatActivity() {
         Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
     }
 
-    // Show a dialog to set bedtime and wakeup times (using two TimePickerDialogs sequentially)
+    // Keep reminders opt-in, with the same expressive pickers as the sleep editor.
     fun showBedtimeDialog() {
         val preferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        // Get current values or use defaults (22:00 for bedtime, 07:00 for wakeup)
-        val currentBedHour = DataModel.getBedtimeHour(preferences)
-        val currentBedMinute = DataModel.getBedtimeMinute(preferences)
-        val currentWakeHour = DataModel.getWakeupHour(preferences)
-        val currentWakeMinute = DataModel.getWakeupMinute(preferences)
-
-        // First, pick bedtime
-        TimePickerDialog(
-            this,
-            { _, bedHour, bedMinute ->
-                // Save bedtime values
-                val editor = preferences.edit()
-                editor.putString("bedtime", "$bedHour:$bedMinute")
-                editor.apply()
-                // Then, pick wakeup time
-                TimePickerDialog(
-                    this,
-                    { _, wakeHour, wakeMinute ->
-                        // Save wakeup values
-                        editor.putString("wakeup", "$wakeHour:$wakeMinute")
-                        editor.apply()
-                        Toast.makeText(
-                            this,
-                            getString(R.string.bedtime_toast),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    },
-                    currentWakeHour,
-                    currentWakeMinute,
-                    true
-                ).show()
-            },
-            currentBedHour,
-            currentBedMinute,
-            true
-        ).show()
+        val bedtime =
+            MaterialTimePicker.Builder()
+                .setTitleText(R.string.settings_bedtime)
+                .setHour(DataModel.getBedtimeHour(preferences))
+                .setMinute(DataModel.getBedtimeMinute(preferences))
+                .setTimeFormat(TimeFormat.CLOCK_24H)
+                .build()
+        bedtime.addOnPositiveButtonClickListener {
+            preferences.edit { putString("bedtime", "${bedtime.hour}:${bedtime.minute}") }
+            val wakeup =
+                MaterialTimePicker.Builder()
+                    .setTitleText(R.string.settings_wakeup)
+                    .setHour(DataModel.getWakeupHour(preferences))
+                    .setMinute(DataModel.getWakeupMinute(preferences))
+                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .build()
+            wakeup.addOnPositiveButtonClickListener {
+                preferences.edit { putString("wakeup", "${wakeup.hour}:${wakeup.minute}") }
+                Toast.makeText(this, R.string.bedtime_toast, Toast.LENGTH_SHORT).show()
+            }
+            wakeup.show(supportFragmentManager, "reminder_wakeup")
+        }
+        bedtime.show(supportFragmentManager, "reminder_bedtime")
     }
 }
 

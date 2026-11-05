@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <color name="plees_primary">#6434C8</color>
+  <color name="plees_on_primary">#FFFFFF</color>
+  <color name="plees_container">#E9DDFF</color>
+  <color name="plees_on_container">#26005D</color>
+  <color name="plees_secondary">#D5F69B</color>
+  <color name="plees_on_secondary">#233500</color>
+  <color name="plees_tertiary">#FFD9E6</color>
+  <color name="plees_on_tertiary">#3F001B</color>
+  <color name="plees_surface">#FFF7FF</color>
+  <color name="plees_on_surface">#201A25</color>
+  <color name="plees_surface_container">#F1E8F6</color>
+  <color name="coral_primary">#A33739</color>
+  <color name="coral_container">#FFDAD7</color>
+  <color name="coral_on_container">#410006</color>
+  <color name="ocean_primary">#006A70</color>
+  <color name="ocean_container">#95F0F5</color>
+  <color name="ocean_on_container">#002022</color>
+  <bool name="plees_light">true</bool>
+</resources>

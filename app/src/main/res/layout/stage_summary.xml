@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='utf-8'?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Plees.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="16dp"
+    app:cardBackgroundColor="?attr/colorSurfaceContainer">
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:padding="20dp"
+      android:orientation="vertical">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/stage_title"
+        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"/>
+    <TextView
+        android:id="@+id/stage_source"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:layout_marginTop="12dp"/>
+    <hu.vmiklos.plees_tracker.StageTimelineView
+        android:id="@+id/stage_timeline"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginTop="16dp"/>
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/stage_breakdown"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+    <TextView
+        android:id="@+id/stage_explanation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/stage_explanation"
+        android:textAppearance="?attr/textAppearanceBodySmall"/>
+  </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

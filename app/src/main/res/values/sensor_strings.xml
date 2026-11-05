@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="sensor_category">Sleep sensing</string>
+  <string name="sensor_mode_title">Tracking mode</string>
+  <string-array name="sensor_modes">
+    <item>Mattress · motion estimates</item>
+    <item>Nightstand · sound-level estimates</item>
+    <item>Simple timer · sensors off</item>
+  </string-array>
+  <string-array name="sensor_mode_values">
+    <item>motion</item>
+    <item>sound</item>
+    <item>manual</item>
+  </string-array>
+  <string name="sensor_setup_title">Settle in for the night</string>
+  <string
+      name="sensor_setup_motion">Place your phone flat on the mattress near your pillow, uncovered and well ventilated. Movement will be analyzed on this phone. Keep it still until you wake. Partners, pets, and mattress type can affect results.\n\nAwake, light, deep, and REM are experimental estimates, not measured sleep stages. Sensor tracking uses battery; choose Simple timer in Settings for sensor-free tracking.</string>
+  <string
+      name="sensor_setup_sound">Put your phone uncovered on the nightstand. The microphone will analyze ambient sound levels on this phone while tracking. Raw audio is never saved. A fan, partner, music, or pets can affect results.\n\nSound alone cannot reliably identify deep sleep or REM. The stage breakdown is an experimental estimate. Microphone capture uses battery and an ongoing notification.</string>
+  <string
+      name="sensor_mic_denied">Sound tracking needs microphone permission. Change the mode in Settings to use motion or the simple timer.</string>
+  <string name="sensor_notification_channel">Overnight sensor tracking</string>
+  <string name="sensor_recording_sound">Analyzing sound levels on this device · tap to open</string>
+  <string name="sensor_recording_motion">Analyzing mattress movement · tap to open</string>
+  <string name="stage_title">Estimated sleep stages</string>
+  <string
+      name="stage_explanation">Experimental phone estimates from activity and time-of-night patterns. Deep and REM are not clinical measurements. Quiet wakefulness can look like sleep. Missing data stays unavailable.</string>
+  <string
+      name="stage_empty">No sensor estimates for this sleep. Choose mattress motion or nightstand sound levels in Settings before your next night.</string>
+  <string
+      name="stage_short">Not enough sensor data yet. At least 10 minutes of usable samples are required.</string>
+  <string name="stage_awake">Awake</string>
+  <string name="stage_light">Light</string>
+  <string name="stage_deep">Deep</string>
+  <string name="stage_rem">REM</string>
+  <string name="stage_unknown">Unavailable</string>
+  <string name="stage_minutes">%1$s · %2$d min</string>
+  <string name="stage_source">Source: %1$s · %2$d%% sensor coverage</string>
+  <string
+      name="stage_timeline_description">Estimated sleep-stage timeline, including unavailable periods</string>
+</resources>

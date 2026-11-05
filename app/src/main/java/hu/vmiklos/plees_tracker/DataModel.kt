@@ -48,50 +48,55 @@ import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import org.apache.commons.csv.CSVRecord
 
-val MIGRATION_1_2 = object : Migration(1, 2) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE sleep ADD COLUMN rating INTEGER NOT NULL DEFAULT 0")
+val MIGRATION_1_2 =
+    object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE sleep ADD COLUMN rating INTEGER NOT NULL DEFAULT 0")
+        }
     }
-}
 
-val MIGRATION_2_3 = object : Migration(2, 3) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE sleep ADD COLUMN comment TEXT NOT NULL DEFAULT ''")
+val MIGRATION_2_3 =
+    object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE sleep ADD COLUMN comment TEXT NOT NULL DEFAULT ''")
+        }
     }
-}
 
-val MIGRATION_3_4 = object : Migration(3, 4) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE sleep ADD COLUMN wakes INTEGER NOT NULL DEFAULT 0")
+val MIGRATION_3_4 =
+    object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE sleep ADD COLUMN wakes INTEGER NOT NULL DEFAULT 0")
+        }
     }
-}
 
-val MIGRATION_4_5 = object : Migration(4, 5) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL(
-            "ALTER TABLE sleep ADD COLUMN health_connect_id TEXT NOT NULL DEFAULT ''"
-        )
-        db.execSQL(
-            "ALTER TABLE sleep ADD COLUMN health_connect_version INTEGER NOT NULL DEFAULT 0"
-        )
-        db.execSQL(
-            "ALTER TABLE sleep ADD COLUMN health_connect_synced_version INTEGER NOT NULL DEFAULT -1"
-        )
-        db.execSQL(
-            "CREATE INDEX index_Sleep_health_connect_id ON sleep(health_connect_id)"
-        )
-        db.execSQL(
-            "CREATE TABLE IF NOT EXISTS health_connect_deletion (" +
-                "health_connect_id TEXT NOT NULL, start_date INTEGER NOT NULL, " +
-                "PRIMARY KEY(health_connect_id))"
-        )
+val MIGRATION_5_6 =
+    object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE sleep ADD COLUMN sensor_data TEXT NOT NULL DEFAULT ''")
+        }
     }
-}
 
-/**
- * Data model is the singleton shared state between the activity and the
- * service.
- */
+val MIGRATION_4_5 =
+    object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE sleep ADD COLUMN health_connect_id TEXT NOT NULL DEFAULT ''")
+            db.execSQL(
+                "ALTER TABLE sleep ADD COLUMN health_connect_version INTEGER NOT NULL DEFAULT 0"
+            )
+            db.execSQL(
+                "ALTER TABLE sleep ADD COLUMN health_connect_synced_version " +
+                    "INTEGER NOT NULL DEFAULT -1"
+            )
+            db.execSQL("CREATE INDEX index_Sleep_health_connect_id ON sleep(health_connect_id)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS health_connect_deletion (" +
+                    "health_connect_id TEXT NOT NULL, start_date INTEGER NOT NULL, " +
+                    "PRIMARY KEY(health_connect_id))"
+            )
+        }
+    }
+
+/** Data model is the singleton shared state between the activity and the service. */
 object DataModel {
 
     lateinit var preferences: SharedPreferences
@@ -140,12 +145,13 @@ object DataModel {
             // killed.
             this.start = Date(start)
         }
-        database = Room.databaseBuilder(context, AppDatabase::class.java, "database")
-            .addMigrations(MIGRATION_1_2)
-            .addMigrations(MIGRATION_2_3)
-            .addMigrations(MIGRATION_3_4)
-            .addMigrations(MIGRATION_4_5)
-            .build()
+        database =
+            Room.databaseBuilder(context, AppDatabase::class.java, "database")
+                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_2_3)
+                .addMigrations(MIGRATION_3_4)
+                .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                .build()
         initialized = true
         migrateFromSingleDestination()
     }
@@ -175,17 +181,18 @@ object DataModel {
 
     /**
      * One-time migration from the old single-destination SharedPreferences keys (auto_backup,
-     * auto_backup_path) to the new backup_destinations JSON list. Runs only when the old keys
-     * are present and the new key is absent.
+     * auto_backup_path) to the new backup_destinations JSON list. Runs only when the old keys are
+     * present and the new key is absent.
      */
     private fun migrateFromSingleDestination() {
         if (preferences.contains("backup_destinations") || !preferences.contains("auto_backup")) {
             return
         }
-        val destinations = BackupDestination.fromLegacyPreferences(
-            autoBackup = preferences.getBoolean("auto_backup", false),
-            folderPath = preferences.getString("auto_backup_path", null)
-        )
+        val destinations =
+            BackupDestination.fromLegacyPreferences(
+                autoBackup = preferences.getBoolean("auto_backup", false),
+                folderPath = preferences.getString("auto_backup_path", null),
+            )
         saveDestinations(destinations)
         preferences.edit {
             // Keep backups running for users who had the legacy switch on; the new key
@@ -233,7 +240,9 @@ object DataModel {
             sleep.start += startDelayMS
         }
 
+        sleep.sensorData = StageRecording.finish(appContext, start?.time ?: 0L)
         database.sleepDao().insert(sleep)
+        StageRecording.discardFinished(appContext, start?.time ?: 0L)
 
         // Drop start timestamp from preferences, it's in the database now.
         preferences.edit {
@@ -257,9 +266,11 @@ object DataModel {
             return
         }
         database.withTransaction {
-            database.healthConnectDao().deleteDeletionsBatched(
-                sleepList.map { it.healthConnectId }.filter { it.isNotEmpty() }
-            )
+            database
+                .healthConnectDao()
+                .deleteDeletionsBatched(
+                    sleepList.map { it.healthConnectId }.filter { it.isNotEmpty() }
+                )
             database.sleepDao().insert(sleepList)
         }
     }
@@ -277,8 +288,7 @@ object DataModel {
 
     internal suspend fun deleteSleepFromDatabase(sleep: Sleep) {
         database.withTransaction {
-            val current = database.sleepDao().getByIdOrNull(sleep.sid)
-                ?: return@withTransaction
+            val current = database.sleepDao().getByIdOrNull(sleep.sid) ?: return@withTransaction
             if (current.healthConnectId.isNotEmpty()) {
                 database.healthConnectDao().insertDeletions(listOf(deletionFor(current)))
             }
@@ -289,18 +299,21 @@ object DataModel {
     suspend fun deleteAllSleep() {
         database.withTransaction {
             val sleeps = database.sleepDao().getAll()
-            database.healthConnectDao().insertDeletions(
-                sleeps.filter { it.healthConnectId.isNotEmpty() }.map(::deletionFor)
-            )
+            database
+                .healthConnectDao()
+                .insertDeletions(
+                    sleeps.filter { it.healthConnectId.isNotEmpty() }.map(::deletionFor)
+                )
             database.sleepDao().deleteAll()
         }
         scheduleHealthConnectSync()
     }
 
-    private fun deletionFor(sleep: Sleep): HealthConnectDeletion = HealthConnectDeletion().apply {
-        healthConnectId = sleep.healthConnectId
-        start = sleep.start
-    }
+    private fun deletionFor(sleep: Sleep): HealthConnectDeletion =
+        HealthConnectDeletion().apply {
+            healthConnectId = sleep.healthConnectId
+            start = sleep.start
+        }
 
     fun scheduleHealthConnectSync() {
         HealthConnectBackend.scheduleSync(appContext)
@@ -315,19 +328,21 @@ object DataModel {
         val afterSleep = {
             database.sleepDao().getAfterLive(after.time)
         }
-        val useMedian = preferences.liveDataBoolean("use_median", false).switchMap { _ ->
-            afterSleep()
-        }
+        val useMedian =
+            preferences.liveDataBoolean("use_median", false).switchMap { _ ->
+                afterSleep()
+            }
         return useMedian
     }
 
     suspend fun importData(context: Context, cr: ContentResolver, uri: Uri) {
         val inputStream = cr.openInputStream(uri)
-        val ret = if (inputStream != null) {
-            inputStream.use { importSleepsFromReader(InputStreamReader(it)) }
-        } else {
-            false
-        }
+        val ret =
+            if (inputStream != null) {
+                inputStream.use { importSleepsFromReader(InputStreamReader(it)) }
+            } else {
+                false
+            }
 
         if (ret) {
             val text = context.getString(R.string.import_success)
@@ -348,76 +363,81 @@ object DataModel {
     }
 
     /** Parses CSV sleeps from [reader], or returns null when the data is not a valid CSV. */
-    internal suspend fun parseSleepsCsv(reader: Reader): List<Sleep>? = withContext(
-        Dispatchers.IO
-    ) {
-        try {
-            val records: Iterable<CSVRecord> = CSVFormat.DEFAULT.parse(reader)
-            val importedSleeps = mutableListOf<Sleep>()
-            var first = true
-            for (cells in records) {
-                if (first) {
-                    // Ignore the header.
-                    first = false
-                    continue
-                }
-                val sleep = Sleep()
-                sleep.start = cells[1].toLong()
-                // Before 2001-09? Then probably seconds was used, not milliseconds.
-                if (sleep.start < 1000000000000L) {
-                    sleep.start *= 1000
-                }
-                sleep.stop = cells[2].toLong()
-                if (sleep.stop < 1000000000000L) {
-                    sleep.stop *= 1000
-                }
-                if (cells.isSet(3)) {
-                    sleep.rating = cells[3].toLong()
-                }
-                if (cells.isSet(4)) {
-                    sleep.comment = cells[4]
-                }
-                if (cells.isSet(5)) {
-                    sleep.wakes = cells[5].toIntOrNull() ?: 0
-                }
-                if (cells.isSet(6)) {
-                    val id = cells[6]
-                    try {
-                        UUID.fromString(id)
-                        sleep.healthConnectId = id
-                    } catch (_: IllegalArgumentException) {
-                        // Keep the empty ID for invalid or legacy values.
+    internal suspend fun parseSleepsCsv(reader: Reader): List<Sleep>? =
+        withContext(Dispatchers.IO) {
+            try {
+                val records: Iterable<CSVRecord> = CSVFormat.DEFAULT.parse(reader)
+                val importedSleeps = mutableListOf<Sleep>()
+                var first = true
+                for (cells in records) {
+                    if (first) {
+                        // Ignore the header.
+                        first = false
+                        continue
                     }
+                    val sleep = Sleep()
+                    sleep.start = cells[1].toLong()
+                    // Before 2001-09? Then probably seconds was used, not milliseconds.
+                    if (sleep.start < 1000000000000L) {
+                        sleep.start *= 1000
+                    }
+                    sleep.stop = cells[2].toLong()
+                    if (sleep.stop < 1000000000000L) {
+                        sleep.stop *= 1000
+                    }
+                    if (cells.isSet(3)) {
+                        sleep.rating = cells[3].toLong()
+                    }
+                    if (cells.isSet(4)) {
+                        sleep.comment = cells[4]
+                    }
+                    if (cells.isSet(5)) {
+                        sleep.wakes = cells[5].toIntOrNull() ?: 0
+                    }
+                    if (cells.isSet(6)) {
+                        val id = cells[6]
+                        try {
+                            UUID.fromString(id)
+                            sleep.healthConnectId = id
+                        } catch (_: IllegalArgumentException) {
+                            // Keep the empty ID for invalid or legacy values.
+                        }
+                    }
+                    if (cells.isSet(7)) {
+                        sleep.healthConnectVersion = cells[7].toLongOrNull()?.coerceAtLeast(0) ?: 0
+                    }
+                    if (cells.isSet(8)) {
+                        val data = cells[8]
+                        if (data.length <= 2000000 && SensorNight.decode(data) != null)
+                            sleep.sensorData = data
+                    }
+                    importedSleeps.add(sleep)
                 }
-                if (cells.isSet(7)) {
-                    sleep.healthConnectVersion = cells[7].toLongOrNull()?.coerceAtLeast(0) ?: 0
-                }
-                importedSleeps.add(sleep)
+                importedSleeps
+            } catch (e: Exception) {
+                Log.e(TAG, "parseSleepsCsv: parsing failed: $e")
+                null
             }
-            importedSleeps
-        } catch (e: Exception) {
-            Log.e(TAG, "parseSleepsCsv: parsing failed: $e")
-            null
         }
-    }
 
     /**
-     * We have a speed vs memory usage trade-off here. Pay the cost of keeping all sleeps in
-     * memory: the benefit is that inserting all of them once triggers a single notification of
-     * observers. This means that importing 100s of sleeps is still ~instant, while it used to
-     * take ~forever.
+     * We have a speed vs memory usage trade-off here. Pay the cost of keeping all sleeps in memory:
+     * the benefit is that inserting all of them once triggers a single notification of observers.
+     * This means that importing 100s of sleeps is still ~instant, while it used to take ~forever.
      */
     private suspend fun insertNewSleeps(importedSleeps: List<Sleep>) {
         val oldSleeps = database.sleepDao().getAll()
-        val usedIds = oldSleeps.mapNotNullTo(mutableSetOf()) {
-            it.healthConnectId.ifEmpty { null }
-        }
-        val newSleeps = importedSleeps.subtract(oldSleeps.toSet()).onEach { sleep ->
-            if (sleep.healthConnectId.isNotEmpty() && !usedIds.add(sleep.healthConnectId)) {
-                sleep.healthConnectId = ""
-                sleep.healthConnectVersion = 0
+        val usedIds =
+            oldSleeps.mapNotNullTo(mutableSetOf()) {
+                it.healthConnectId.ifEmpty { null }
             }
-        }
+        val newSleeps =
+            importedSleeps.subtract(oldSleeps.toSet()).onEach { sleep ->
+                if (sleep.healthConnectId.isNotEmpty() && !usedIds.add(sleep.healthConnectId)) {
+                    sleep.healthConnectId = ""
+                    sleep.healthConnectVersion = 0
+                }
+            }
         insertSleeps(newSleeps.toList())
         scheduleHealthConnectSync()
     }
@@ -428,8 +448,8 @@ object DataModel {
 
     /**
      * Returns provider sleeps which are not already represented locally. Matching Health Connect
-     * IDs belong to the local source of truth even if their contents differ; matching contents
-     * with a different ID are also skipped to avoid creating a visible duplicate.
+     * IDs belong to the local source of truth even if their contents differ; matching contents with
+     * a different ID are also skipped to avoid creating a visible duplicate.
      */
     suspend fun healthConnectImportCandidates(sleeps: List<Sleep>): List<Sleep> {
         val localSleeps = database.sleepDao().getAll()
@@ -440,9 +460,7 @@ object DataModel {
         }
     }
 
-    /**
-     * True when there is at least one sleep stored locally.
-     */
+    /** True when there is at least one sleep stored locally. */
     suspend fun hasSleeps(): Boolean {
         return database.sleepDao().count() > 0
     }
@@ -450,8 +468,8 @@ object DataModel {
     /**
      * Restores sleeps from the Google Drive backup (gplay flavor only). Returns true on success.
      * With [override] the local sleeps are replaced by the backup; otherwise the backup is merged
-     * into the existing data. The local data is only cleared after both the download and the
-     * parse succeeded, so a failed fetch or a corrupt backup never wipes existing sleeps.
+     * into the existing data. The local data is only cleared after both the download and the parse
+     * succeeded, so a failed fetch or a corrupt backup never wipes existing sleeps.
      */
     suspend fun restoreFromDrive(context: Context, email: String, override: Boolean): Boolean {
         val data = DriveBackend.download(context, email) ?: return false
@@ -465,9 +483,12 @@ object DataModel {
 
     suspend fun importDataFromCalendar(context: Context, calendarId: String) {
         // Query the calendar for events
-        val importedSleeps = CalendarImport.queryForEvents(
-            context, calendarId
-        ).map(CalendarImport::mapEventToSleep)
+        val importedSleeps =
+            CalendarImport.queryForEvents(
+                context,
+                calendarId,
+            )
+                .map(CalendarImport::mapEventToSleep)
         val oldSleeps = database.sleepDao().getAll()
         val newSleeps = importedSleeps.subtract(oldSleeps.toSet())
 
@@ -476,41 +497,46 @@ object DataModel {
         scheduleHealthConnectSync()
 
         // Show how many sleeps were imported.
-        val text = context.resources.getQuantityString(
-            R.plurals.imported_items,
-            newSleeps.size,
-            newSleeps.size
-        )
+        val text =
+            context.resources.getQuantityString(
+                R.plurals.imported_items,
+                newSleeps.size,
+                newSleeps.size,
+            )
         val duration = Toast.LENGTH_SHORT
         val toast = Toast.makeText(context, text, duration)
         toast.show()
     }
 
     suspend fun exportDataToCalendar(context: Context, calendarId: String) {
-        val calendarSleeps = CalendarImport.queryForEvents(
-            context, calendarId
-        ).map(CalendarImport::mapEventToSleep)
+        val calendarSleeps =
+            CalendarImport.queryForEvents(
+                context,
+                calendarId,
+            )
+                .map(CalendarImport::mapEventToSleep)
         val sleeps = database.sleepDao().getAll()
         val exportedSleeps = sleeps.subtract(calendarSleeps.toSet())
 
         CalendarExport.exportSleep(context, calendarId, exportedSleeps.toList())
 
         // Show how many sleeps were exported.
-        val text = context.resources.getQuantityString(
-            R.plurals.exported_items,
-            exportedSleeps.size,
-            exportedSleeps.size
-        )
+        val text =
+            context.resources.getQuantityString(
+                R.plurals.exported_items,
+                exportedSleeps.size,
+                exportedSleeps.size,
+            )
         val duration = Toast.LENGTH_SHORT
         val toast = Toast.makeText(context, text, duration)
         toast.show()
     }
 
     /**
-     * Backs up sleeps to all configured destinations. Drive accounts with "on_change" frequency
-     * are uploaded via a WorkManager job, so the upload survives this call's coroutine being
-     * cancelled (e.g. the app is closed) and retries on transient failure; "daily" accounts are
-     * handled by their own periodic worker. Folder backups are written here directly.
+     * Backs up sleeps to all configured destinations. Drive accounts with "on_change" frequency are
+     * uploaded via a WorkManager job, so the upload survives this call's coroutine being cancelled
+     * (e.g. the app is closed) and retries on transient failure; "daily" accounts are handled by
+     * their own periodic worker. Folder backups are written here directly.
      */
     suspend fun backupSleeps(context: Context, cr: ContentResolver) {
         backupSleepsCallback?.invoke()
@@ -538,22 +564,21 @@ object DataModel {
     suspend fun hasFolderBackup(context: Context, path: String): Boolean =
         withContext(Dispatchers.IO) {
             try {
-                DocumentFile.fromTreeUri(context, Uri.parse(path))
-                    ?.findFile("backup.csv") != null
+                DocumentFile.fromTreeUri(context, Uri.parse(path))?.findFile("backup.csv") != null
             } catch (_: Exception) {
                 false
             }
         }
 
     /**
-     * Deletes the backup.csv written by [backupSleepsToFolder] from the folder destination
-     * [path]. Returns true when the file is gone afterwards (deleted or never existed).
+     * Deletes the backup.csv written by [backupSleepsToFolder] from the folder destination [path].
+     * Returns true when the file is gone afterwards (deleted or never existed).
      */
     suspend fun deleteFolderBackup(context: Context, path: String): Boolean =
         withContext(Dispatchers.IO) {
             try {
-                val folder = DocumentFile.fromTreeUri(context, Uri.parse(path))
-                    ?: return@withContext false
+                val folder =
+                    DocumentFile.fromTreeUri(context, Uri.parse(path)) ?: return@withContext false
                 val file = folder.findFile("backup.csv") ?: return@withContext true
                 file.delete()
             } catch (e: Exception) {
@@ -571,22 +596,21 @@ object DataModel {
         exportDataToFile(context, cr, backup.uri, showToast = false)
     }
 
-    /**
-     * Serializes all sleeps to importable (non-pretty) CSV bytes, used by the Drive backup.
-     */
-    suspend fun serializeSleeps(): ByteArray = withContext(Dispatchers.IO) {
-        val sleeps = database.sleepDao().getAll()
-        val os = ByteArrayOutputStream()
-        writeSleepsCsv(sleeps, os, prettyBackup = false)
-        os.toByteArray()
-    }
+    /** Serializes all sleeps to importable (non-pretty) CSV bytes, used by the Drive backup. */
+    suspend fun serializeSleeps(): ByteArray =
+        withContext(Dispatchers.IO) {
+            val sleeps = database.sleepDao().getAll()
+            val os = ByteArrayOutputStream()
+            writeSleepsCsv(sleeps, os, prettyBackup = false)
+            os.toByteArray()
+        }
 
     /**
-     * Uploads [data] to [email]'s Drive backup unless it is byte-identical to the last payload
-     * this device successfully uploaded there, so automatic backups (daily worker, on-change)
-     * don't re-send unchanged data. Returns true when the backup is up to date afterwards.
-     * Manual "Back up now" bypasses this and always uploads, which also repairs a backup that
-     * went missing remotely while the stored hash still matches.
+     * Uploads [data] to [email]'s Drive backup unless it is byte-identical to the last payload this
+     * device successfully uploaded there, so automatic backups (daily worker, on-change) don't
+     * re-send unchanged data. Returns true when the backup is up to date afterwards. Manual "Back
+     * up now" bypasses this and always uploads, which also repairs a backup that went missing
+     * remotely while the stored hash still matches.
      */
     suspend fun uploadToDriveIfChanged(context: Context, email: String, data: ByteArray): Boolean {
         val hash = sha256(data)
@@ -615,21 +639,21 @@ object DataModel {
     }
 
     fun sha256(data: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(data)
-            .joinToString("") { "%02x".format(it) }
+        MessageDigest.getInstance("SHA-256").digest(data).joinToString("") { "%02x".format(it) }
 
     suspend fun exportDataToFile(
         context: Context,
         cr: ContentResolver,
         uri: Uri,
-        showToast: Boolean
+        showToast: Boolean,
     ) {
         val prettyBackup = preferences.getBoolean("pretty_backup", false)
         val sleeps = database.sleepDao().getAll()
 
         try {
             cr.takePersistableUriPermission(
-                uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                uri,
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
             )
         } catch (e: SecurityException) {
             Log.e(TAG, "exportData: takePersistableUriPermission() failed for write")
@@ -656,8 +680,7 @@ object DataModel {
         } finally {
             try {
                 os?.close()
-            } catch (_: Exception) {
-            }
+            } catch (_: Exception) {}
         }
 
         if (!showToast) {
@@ -677,13 +700,28 @@ object DataModel {
         val writer = CSVPrinter(OutputStreamWriter(os, "UTF-8"), CSVFormat.DEFAULT)
         if (prettyBackup) {
             writer.printRecord(
-                "sid", "start", "stop", "length", "rating", "comment", "wakes",
-                "health_connect_id", "health_connect_version"
+                "sid",
+                "start",
+                "stop",
+                "length",
+                "rating",
+                "comment",
+                "wakes",
+                "health_connect_id",
+                "health_connect_version",
+                "sensor_data",
             )
         } else {
             writer.printRecord(
-                "sid", "start", "stop", "rating", "comment", "wakes",
-                "health_connect_id", "health_connect_version"
+                "sid",
+                "start",
+                "stop",
+                "rating",
+                "comment",
+                "wakes",
+                "health_connect_id",
+                "health_connect_version",
+                "sensor_data",
             )
         }
         for (sleep in sleeps) {
@@ -699,7 +737,8 @@ object DataModel {
                     sleep.comment,
                     sleep.wakes,
                     sleep.healthConnectId,
-                    sleep.healthConnectVersion
+                    sleep.healthConnectVersion,
+                    sleep.sensorData,
                 )
             } else {
                 writer.printRecord(
@@ -710,7 +749,8 @@ object DataModel {
                     sleep.comment,
                     sleep.wakes,
                     sleep.healthConnectId,
-                    sleep.healthConnectVersion
+                    sleep.healthConnectVersion,
+                    sleep.sensorData,
                 )
             }
         }
@@ -723,9 +763,7 @@ object DataModel {
         return sleeps.size.toString()
     }
 
-    /**
-     * Calculates the avg of sleeps.
-     */
+    /** Calculates the avg of sleeps. */
     fun getSleepDurationStat(sleeps: List<Sleep>, compactView: Boolean): String {
         var sum: Long = 0
         for (sleep in sleeps) {
@@ -740,17 +778,16 @@ object DataModel {
     }
 
     enum class StatFunction {
-        AVERAGE, MEDIAN
+        AVERAGE,
+        MEDIAN,
     }
 
-    /**
-     * Sums up sleeps per day, and then calculate the avg of those sums.
-     */
+    /** Sums up sleeps per day, and then calculate the avg of those sums. */
     fun getSleepDurationDailyStat(
         sleeps: List<Sleep>,
         compactView: Boolean,
         ignoreEmptyDays: Boolean,
-        statFunction: StatFunction
+        statFunction: StatFunction,
     ): String {
         // Day -> sum (in seconds) map.
         val sums = HashMap<Long, Long>()
@@ -795,10 +832,11 @@ object DataModel {
         if (ignoreEmptyDays) {
             count = sums.keys.size.toLong()
         }
-        val duration: Long = when (statFunction) {
-            StatFunction.AVERAGE -> sums.values.sum() / count
-            StatFunction.MEDIAN -> median(sums.values.toLongArray()).roundToLong()
-        }
+        val duration: Long =
+            when (statFunction) {
+                StatFunction.AVERAGE -> sums.values.sum() / count
+                StatFunction.MEDIAN -> median(sums.values.toLongArray()).roundToLong()
+            }
 
         return formatDuration(duration, compactView)
     }
@@ -806,43 +844,47 @@ object DataModel {
     fun formatDuration(seconds: Long, compactView: Boolean): String {
         if (compactView) {
             return String.format(
-                Locale.getDefault(), "%d:%02d",
-                seconds / 3600, seconds % 3600 / 60
+                Locale.getDefault(),
+                "%d:%02d",
+                seconds / 3600,
+                seconds % 3600 / 60,
             )
         }
 
         return String.format(
-            Locale.getDefault(), "%d:%02d:%02d",
-            seconds / 3600, seconds % 3600 / 60,
-            seconds % 60
+            Locale.getDefault(),
+            "%d:%02d:%02d",
+            seconds / 3600,
+            seconds % 3600 / 60,
+            seconds % 60,
         )
     }
 
     fun formatTimestamp(date: Date, compactView: Boolean): String {
-        val sdf = if (compactView) {
-            SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        } else {
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss XXX", Locale.getDefault())
-        }
+        val sdf =
+            if (compactView) {
+                SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            } else {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss XXX", Locale.getDefault())
+            }
         return sdf.format(date)
     }
 
     fun formatDateTime(date: Date, asTime: Boolean, compactView: Boolean): String {
-        val sdf = if (asTime) {
-            if (compactView) {
-                SimpleDateFormat("HH:mm", Locale.getDefault())
+        val sdf =
+            if (asTime) {
+                if (compactView) {
+                    SimpleDateFormat("HH:mm", Locale.getDefault())
+                } else {
+                    SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                }
             } else {
-                SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             }
-        } else {
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        }
         return sdf.format(date)
     }
 
-    /**
-     * Returns the subset of [sleeps] which stop after [after].
-     */
+    /** Returns the subset of [sleeps] which stop after [after]. */
     fun filterSleeps(sleeps: List<Sleep>, after: Date): List<Sleep> {
         return sleeps.filter { it.stop > after.time }
     }
@@ -851,7 +893,7 @@ object DataModel {
         preferences: SharedPreferences,
         name: String,
         index: Int,
-        default: Int
+        default: Int,
     ): Int {
         val pref = preferences.getString(name, "")
         if (pref == null) {
@@ -886,9 +928,18 @@ object DataModel {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // Handle edge-to-edge mode
             val rootView = activity.findViewById<View>(R.id.root)
+            val left = rootView.paddingLeft
+            val top = rootView.paddingTop
+            val right = rootView.paddingRight
+            val bottom = rootView.paddingBottom
             ViewCompat.setOnApplyWindowInsetsListener(rootView) { view, insets ->
                 val sysBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                view.setPadding(sysBars.left, sysBars.top, sysBars.right, sysBars.bottom)
+                view.setPadding(
+                    left + sysBars.left,
+                    top + sysBars.top,
+                    right + sysBars.right,
+                    bottom + sysBars.bottom,
+                )
                 WindowInsetsCompat.CONSUMED
             }
             val resources = activity.resources

@@ -1,32 +1,51 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
+<?xml version='1.0' encoding='utf-8'?>
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+  <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/explore_graphs"
+      android:textAppearance="@style/Plees.Title"/>
+  <HorizontalScrollView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:scrollbars="none"
+      android:layout_marginVertical="16dp">
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/graph_choices"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:singleLine="true"
+        app:singleSelection="true"
+        app:selectionRequired="true"/>
+  </HorizontalScrollView>
+  <com.google.android.material.card.MaterialCardView
+      style="@style/Plees.Card"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      app:cardBackgroundColor="?attr/colorSurfaceContainer">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:layout_margin="8dp"
-        android:gravity="center_vertical" >
-
-        <TextView
-            android:id="@+id/chart_axis_left_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/textColor"
-            android:rotation="-90"
-            android:layout_marginStart="-10dp"
-            android:layout_marginEnd="-10dp"
-            android:textSize="12sp" />
-
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/line_chart"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
+        android:orientation="vertical"
+        android:padding="16dp">
+      <TextView
+          android:id="@+id/chart_axis_left_label"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:textAppearance="?attr/textAppearanceLabelLarge"/>
+      <com.github.mikephil.charting.charts.LineChart
+          android:id="@+id/line_chart"
+          android:layout_width="match_parent"
+          android:layout_height="0dp"
+          android:layout_weight="1"/>
     </LinearLayout>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+  </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

@@ -6,13 +6,13 @@
 
 package hu.vmiklos.plees_tracker
 
-import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class SharedPreferencesChangeListener : SharedPreferences.OnSharedPreferenceChangeListener {
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String?) {
@@ -30,13 +30,13 @@ class SharedPreferencesChangeListener : SharedPreferences.OnSharedPreferenceChan
                 if (sharedPreferences.getBoolean("enable_dnd", false)) {
                     val preferencesActivity = DataModel.preferencesActivity
                     val noteServ = Context.NOTIFICATION_SERVICE // 100 char limit
-                    val dndManager = preferencesActivity?.getSystemService(noteServ)
-                        as NotificationManager
+                    val dndManager =
+                        preferencesActivity?.getSystemService(noteServ) as NotificationManager
                     val hasPermission = dndManager.isNotificationPolicyAccessGranted
 
                     if (!hasPermission) {
                         // If we don't have permissions for DND
-                        AlertDialog.Builder(preferencesActivity)
+                        MaterialAlertDialogBuilder(preferencesActivity)
                             .setTitle(R.string.settings_enable_dnd_q_title)
                             .setMessage(R.string.settings_enable_dnd_q_message)
                             .setPositiveButton(R.string.settings_enable_dnd_q_ok) { _, _ ->

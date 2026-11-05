@@ -10,13 +10,10 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 
-/**
- * The activity is the editing UI of a single sleep.
- */
-class SleepActivity : AppCompatActivity(), View.OnClickListener {
+/** The activity is the editing UI of a single sleep. */
+class SleepActivity : ExpressiveActivity(), View.OnClickListener {
     private lateinit var viewModel: SleepViewModel
     private var sid: Int = 0
 
@@ -42,7 +39,7 @@ class SleepActivity : AppCompatActivity(), View.OnClickListener {
 
         title = String.format(getString(R.string.sleep_id), sid.toString())
         // Show a back button.
-        actionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         viewModel.showSleep(this, sid)
     }

@@ -8,11 +8,11 @@ package hu.vmiklos.plees_tracker
 
 import android.content.Context
 import android.os.Looper
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
+import com.google.android.material.button.MaterialButton
 import java.util.Calendar
 import java.util.concurrent.Executor
 import kotlinx.coroutines.runBlocking
@@ -26,9 +26,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/**
- * Tests for MainActivity, run on the JVM with Robolectric.
- */
+/** Tests for MainActivity, run on the JVM with Robolectric. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [37])
 class MainActivityTest {
@@ -37,16 +35,21 @@ class MainActivityTest {
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit()
+            .putString("sensor_mode", "manual")
+            .commit()
         DataModel.init(context, PreferenceManager.getDefaultSharedPreferences(context))
         DataModel.database.close()
         // Run Room queries on the calling thread, so the activity's viewModelScope coroutines
         // can be driven deterministically by idling the main looper.
         val direct = Executor { it.run() }
-        DataModel.database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
-            .allowMainThreadQueries()
-            .setQueryExecutor(direct)
-            .setTransactionExecutor(direct)
-            .build()
+        DataModel.database =
+            Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+                .allowMainThreadQueries()
+                .setQueryExecutor(direct)
+                .setTransactionExecutor(direct)
+                .build()
         DataModel.start = null
         DataModel.stop = null
     }
@@ -78,7 +81,7 @@ class MainActivityTest {
         DataModel.database.clearAllTables()
 
         // When creating one:
-        val startStop = activity.findViewById<LinearLayout>(R.id.start_stop_layout)
+        val startStop = activity.findViewById<MaterialButton>(R.id.start_stop_layout)
         startStop.performClick()
         idle()
         startStop.performClick()
@@ -104,7 +107,7 @@ class MainActivityTest {
         // Then make sure the sleep count widget reads the correct value:
         assertEquals(
             "1",
-            activity.findViewById<TextView>(R.id.fragment_stats_sleeps).text.toString()
+            activity.findViewById<TextView>(R.id.fragment_stats_sleeps).text.toString(),
         )
     }
 
@@ -119,24 +122,32 @@ class MainActivityTest {
         idle()
         assertEquals(
             "1",
-            activity.findViewById<TextView>(R.id.fragment_stats_sleeps).text.toString()
+            activity.findViewById<TextView>(R.id.fragment_stats_sleeps).text.toString(),
         )
 
         // When deleting one:
+        activity
+            .findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
+                R.id.navigation
+            )
+            .selectedItemId = R.id.nav_statistics
+        idle()
         val recyclerView = activity.findViewById<RecyclerView>(R.id.sleeps)
-        val viewHolder = recyclerView.findViewHolderForAdapterPosition(0)
-            ?: throw AssertionError("no view holder")
+        val viewHolder =
+            recyclerView.findViewHolderForAdapterPosition(0)
+                ?: throw AssertionError("no view holder")
         // Simulate the swipe handled by ItemTouchHelper
         val adapter = recyclerView.adapter as SleepsAdapter
         val viewModelField = MainActivity::class.java.getDeclaredField("viewModel")
         viewModelField.isAccessible = true
         val viewModel = viewModelField.get(activity) as MainViewModel
-        val callback = SleepTouchCallback(
-            context,
-            context.contentResolver,
-            viewModel,
-            adapter
-        )
+        val callback =
+            SleepTouchCallback(
+                context,
+                context.contentResolver,
+                viewModel,
+                adapter,
+            )
         callback.onSwiped(viewHolder, 4) // ItemTouchHelper.RIGHT
         idle()
 
@@ -148,7 +159,7 @@ class MainActivityTest {
         // Then make sure we have no sleeps:
         assertEquals(
             "0",
-            activity.findViewById<TextView>(R.id.fragment_stats_sleeps).text.toString()
+            activity.findViewById<TextView>(R.id.fragment_stats_sleeps).text.toString(),
         )
     }
 }

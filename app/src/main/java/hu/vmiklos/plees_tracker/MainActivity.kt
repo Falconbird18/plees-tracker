@@ -13,7 +13,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -21,14 +20,11 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
@@ -37,13 +33,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.DefaultItemAnimator
-import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.LibsBuilder
 import hu.vmiklos.plees_tracker.calendar.CalendarImport
 import hu.vmiklos.plees_tracker.calendar.UserCalendar
@@ -52,28 +47,40 @@ import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.launch
 
-/**
- * The activity is the primary UI of the app: allows starting and stopping the
- * tracking.
- */
-class MainActivity : AppCompatActivity(), View.OnClickListener {
+/** The activity is the primary UI of the app: allows starting and stopping the tracking. */
+class MainActivity : ExpressiveActivity(), View.OnClickListener {
 
     private lateinit var viewModel: MainViewModel
 
     // SharedPreferences keeps listeners in a WeakHashMap, so keep this as a member.
     private val sharedPreferenceListener = SharedPreferencesChangeListener()
 
-    private val exportPermissionLauncher = registerForActivityResult(
-        RequestMultiplePermissions()
-    ) { permissions: Map<String, Boolean> ->
-        checkCalendarPermissionGranted(permissions, ::exportCalendarData)
-    }
+    private val sensorPermissions =
+        registerForActivityResult(RequestMultiplePermissions()) { result ->
+            val mode =
+                PreferenceManager.getDefaultSharedPreferences(this)
+                    .getString("sensor_mode", "motion")
+            if (
+                mode == "sound" &&
+                result[Manifest.permission.RECORD_AUDIO] != true &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                Toast.makeText(this, R.string.sensor_mic_denied, Toast.LENGTH_LONG).show()
+            } else startNewSession()
+        }
 
-    private val importPermissionLauncher = registerForActivityResult(
-        RequestMultiplePermissions()
-    ) { permissions: Map<String, Boolean> ->
-        checkCalendarPermissionGranted(permissions, ::importCalendarData)
-    }
+    private val exportPermissionLauncher =
+        registerForActivityResult(RequestMultiplePermissions()) { permissions: Map<String, Boolean>
+            ->
+            checkCalendarPermissionGranted(permissions, ::exportCalendarData)
+        }
+
+    private val importPermissionLauncher =
+        registerForActivityResult(RequestMultiplePermissions()) { permissions: Map<String, Boolean>
+            ->
+            checkCalendarPermissionGranted(permissions, ::importCalendarData)
+        }
 
     private val importActivityResult =
         registerForActivityResult(StartActivityForResult()) { result ->
@@ -92,7 +99,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             try {
                 result.data?.data?.let { uri ->
                     viewModel.exportDataToFile(
-                        applicationContext, contentResolver, uri, showToast = true
+                        applicationContext,
+                        contentResolver,
+                        uri,
+                        showToast = true,
                     )
                 }
             } catch (e: Exception) {
@@ -142,28 +152,53 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             }
         }
 
-        viewModel = ViewModelProvider.AndroidViewModelFactory(application)
-            .create(MainViewModel::class.java)
+        viewModel =
+            ViewModelProvider.AndroidViewModelFactory(application).create(MainViewModel::class.java)
 
         setContentView(R.layout.activity_main)
 
+        supportActionBar?.hide()
+        setSupportActionBar(findViewById(R.id.toolbar))
         DataModel.handleWindowInsets(this)
+        val navigation = findViewById<BottomNavigationView>(R.id.navigation)
+        navigation.setOnItemSelectedListener { item ->
+            val stats = item.itemId == R.id.nav_statistics
+            findViewById<androidx.core.widget.NestedScrollView>(R.id.main_scroll).post {
+                findViewById<androidx.core.widget.NestedScrollView>(R.id.main_scroll).scrollTo(0, 0)
+            }
+            findViewById<View>(R.id.tracking_panel).visibility =
+                if (stats) View.GONE else View.VISIBLE
+            findViewById<View>(R.id.main_scroll).visibility = if (stats) View.VISIBLE else View.GONE
+            findViewById<TextView>(R.id.page_title)
+                .setText(if (stats) R.string.stats_title else R.string.rest_title)
+            findViewById<TextView>(R.id.page_subtitle)
+                .setText(if (stats) R.string.stats_subtitle else R.string.rest_subtitle)
+            true
+        }
+        navigation.selectedItemId = savedInstanceState?.getInt("selected_tab") ?: R.id.nav_sleep
+        findViewById<View>(R.id.explore_graphs).setOnClickListener {
+            startActivity(Intent(this, GraphsActivity::class.java))
+        }
+        findViewById<View>(R.id.compare_statistics).setOnClickListener {
+            startActivity(Intent(this, StatsActivity::class.java))
+        }
+        if (!preferences.getBoolean("onboarding_complete", false)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+        }
 
-        val startStop = findViewById<LinearLayout>(R.id.start_stop_layout)
+        val startStop = findViewById<MaterialButton>(R.id.start_stop_layout)
         startStop.setOnClickListener(this)
 
-        preferences.liveData("dashboard_duration", "-7").observe(
-            this
-        ) { setDashboardText(it ?: "0") }
+        preferences.liveData("dashboard_duration", "-7").observe(this) {
+            setDashboardText(it ?: "0")
+        }
 
         // Hide plain avg and avg(daily sum) if requested:
-        preferences.liveDataBoolean("show_average_sleep_durations", false).observe(
-            this
-        ) {
+        preferences.liveDataBoolean("show_average_sleep_durations", false).observe(this) {
             it?.let {
                 val fragments = supportFragmentManager
                 val stats = fragments.findFragmentById(R.id.dashboard_body)?.view
-                val layout = stats?.findViewById<LinearLayout>(R.id.fragment_stats_average_layout)
+                val layout = stats?.findViewById<View>(R.id.fragment_stats_average_layout)
                 if (it) {
                     layout?.visibility = View.VISIBLE
                 } else {
@@ -171,13 +206,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 }
             }
         }
-        preferences.liveDataBoolean("show_average_daily_sums", true).observe(
-            this
-        ) {
+        preferences.liveDataBoolean("show_average_daily_sums", true).observe(this) {
             it?.let {
                 val fragments = supportFragmentManager
                 val stats = fragments.findFragmentById(R.id.dashboard_body)?.view
-                val layout = stats?.findViewById<LinearLayout>(R.id.fragment_stats_daily_layout)
+                val layout = stats?.findViewById<View>(R.id.fragment_stats_daily_layout)
                 if (it) {
                     layout?.visibility = View.VISIBLE
                 } else {
@@ -186,28 +219,76 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             }
         }
 
+        val periods = findViewById<com.google.android.material.chip.ChipGroup>(R.id.period_choices)
+        val periodValues = resources.getStringArray(R.array.duration_entry_values)
+        resources.getStringArray(R.array.duration_entries).forEachIndexed { index, label ->
+            val chip =
+                com.google.android.material.chip.Chip(this).apply {
+                    id = View.generateViewId()
+                    text = label
+                    tag = periodValues[index]
+                    isCheckable = true
+                    isChecked = tag == preferences.getString("dashboard_duration", "-7")
+                    minHeight = (48 * resources.displayMetrics.density).toInt()
+                }
+            periods.addView(chip)
+        }
+        periods.setOnCheckedStateChangeListener { group, ids ->
+            ids.firstOrNull()?.let { id ->
+                preferences.edit {
+                    putString("dashboard_duration", group.findViewById<View>(id).tag as String)
+                }
+            }
+        }
+        var latestSleep: Sleep? = null
+        fun updateGoal() {
+            val latest = latestSleep
+            val goal = preferences.getString("ideal_sleep_length", "8.0") ?: "8.0"
+            val target = goal.toFloatOrNull()?.takeIf { it > 0 } ?: 8f
+            findViewById<TextView>(R.id.goal_summary).text =
+                if (latest == null) getString(R.string.goal_empty)
+                else
+                    getString(
+                        R.string.goal_summary,
+                        DataModel.formatDuration((latest.stop - latest.start) / 1000, true),
+                        goal,
+                    )
+            findViewById<com.google.android.material.progressindicator.LinearProgressIndicator>(
+                R.id.goal_progress
+            )
+                .setProgressCompat(
+                    ((latest?.lengthHours ?: 0f) / target * 100).toInt().coerceIn(0, 100),
+                    true,
+                )
+        }
+        DataModel.sleepsLive.observe(this) { sleeps ->
+            latestSleep = sleeps?.maxByOrNull { it.stop }
+            findViewById<StageSummaryView>(R.id.latest_stages).showSleep(latestSleep)
+            updateGoal()
+        }
+        preferences.liveData("ideal_sleep_length", "8.0").observe(this) { updateGoal() }
         val sleepsAdapter = SleepsAdapter(preferences)
         val recyclerView = findViewById<RecyclerView>(R.id.sleeps)
-        viewModel.durationSleepsLive.observe(
-            this
-        ) { sleeps ->
+        viewModel.durationSleepsLive.observe(this) { sleeps ->
             if (sleeps != null) {
                 val fragments = supportFragmentManager
                 val stats = fragments.findFragmentById(R.id.dashboard_body)?.view
                 val countStat = stats?.findViewById<TextView>(R.id.fragment_stats_sleeps)
                 countStat?.text = DataModel.getSleepCountStat(sleeps)
                 val durationStat = stats?.findViewById<TextView>(R.id.fragment_stats_average)
-                durationStat?.text = DataModel.getSleepDurationStat(
-                    sleeps,
-                    DataModel.getCompactView()
-                )
+                durationStat?.text =
+                    DataModel.getSleepDurationStat(
+                        sleeps,
+                        DataModel.getCompactView(),
+                    )
                 val durationDailyStat = stats?.findViewById<TextView>(R.id.fragment_stats_daily)
-                durationDailyStat?.text = DataModel.getSleepDurationDailyStat(
-                    sleeps,
-                    DataModel.getCompactView(),
-                    DataModel.getIgnoreEmptyDays(),
-                    DataModel.getStatFunction()
-                )
+                durationDailyStat?.text =
+                    DataModel.getSleepDurationDailyStat(
+                        sleeps,
+                        DataModel.getCompactView(),
+                        DataModel.getIgnoreEmptyDays(),
+                        DataModel.getStatFunction(),
+                    )
                 sleepsAdapter.data = sleeps
 
                 // Set up placeholder text if there are no sleeps.
@@ -224,50 +305,33 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         val recyclerViewLayout = LinearLayoutManager(this)
         recyclerView.layoutManager = recyclerViewLayout
-        recyclerView.setHasFixedSize(true)
         recyclerView.itemAnimator = DefaultItemAnimator()
         recyclerView.adapter = sleepsAdapter
-
-        // Enable separators between sleep items.
-        val dividerItemDecoration = DividerItemDecoration(
-            recyclerView.context,
-            recyclerViewLayout.orientation
-        )
-        recyclerView.addItemDecoration(dividerItemDecoration)
 
         sleepsAdapter.registerAdapterDataObserver(
             object : RecyclerView.AdapterDataObserver() {
                 override fun onItemRangeInserted(
                     positionStart: Int,
-                    itemCount: Int
+                    itemCount: Int,
                 ) {
                     recyclerView.scrollToPosition(positionStart)
                 }
-            })
+            }
+        )
 
         // Otherwise swipe on a card view deletes it.
-        val itemTouchHelper = ItemTouchHelper(
-            SleepTouchCallback(
-                applicationContext,
-                contentResolver,
-                viewModel,
-                sleepsAdapter
+        val itemTouchHelper =
+            ItemTouchHelper(
+                SleepTouchCallback(
+                    applicationContext,
+                    contentResolver,
+                    viewModel,
+                    sleepsAdapter,
+                )
             )
-        )
         itemTouchHelper.attachToRecyclerView(recyclerView)
         val sleepClickCallback = SleepClickCallback(this, sleepsAdapter, recyclerView)
         sleepsAdapter.clickCallback = sleepClickCallback
-
-        // Hide label of FAB on scroll.
-        val fabText = findViewById<TextView>(R.id.start_stop_text)
-        val listener = View.OnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-            if (scrollY > oldScrollY) {
-                fabText.visibility = View.GONE
-            } else {
-                fabText.visibility = View.VISIBLE
-            }
-        }
-        recyclerView.setOnScrollChangeListener(listener)
 
         // See if the activity is triggered from the widget. If so, toggle the start/stop state.
         handleIntent(intent)
@@ -287,10 +351,27 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         updateView()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(
+            "selected_tab",
+            findViewById<BottomNavigationView>(R.id.navigation).selectedItemId,
+        )
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onStart() {
         super.onStart()
         val intent = Intent(this, MainService::class.java)
         stopService(intent)
+        val mode =
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .getString("active_sensor_mode", "manual")
+        if (DataModel.start != null && DataModel.stop == null && mode != "manual") {
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, StageTrackingService::class.java),
+            )
+        }
         val recyclerView = findViewById<RecyclerView>(R.id.sleeps)
         recyclerView.findViewHolderForAdapterPosition(0)?.let {
             // Since the adapter unconditionally gets assigned in `onCreate()`
@@ -303,24 +384,98 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     override fun onStop() {
         super.onStop()
         val intent = Intent(this, MainService::class.java)
-        if (DataModel.start != null && DataModel.stop == null) {
+        if (
+            DataModel.start != null &&
+            DataModel.stop == null &&
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .getString("active_sensor_mode", "manual") == "manual"
+        ) {
             startService(intent)
         }
     }
 
     override fun onClick(view: View?) {
-        when (view?.id) {
-            R.id.start_stop_layout -> {
-                if (DataModel.start != null && DataModel.stop == null) {
-                    DataModel.stop = Calendar.getInstance().time
-                    viewModel.stopSleep(applicationContext, contentResolver)
-                } else {
-                    DataModel.start = Calendar.getInstance().time
-                    DataModel.stop = null
-                }
-                updateView()
+        if (view?.id != R.id.start_stop_layout) return
+        if (DataModel.start != null && DataModel.stop == null) {
+            DataModel.stop = Calendar.getInstance().time
+            viewModel.stopSleep(applicationContext, contentResolver)
+            stopService(Intent(this, StageTrackingService::class.java))
+            val preferences = PreferenceManager.getDefaultSharedPreferences(this)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (
+                preferences.getBoolean("enable_dnd", false) &&
+                manager.isNotificationPolicyAccessGranted
+            ) {
+                manager.setInterruptionFilter(
+                    preferences.getInt("current_dnd", NotificationManager.INTERRUPTION_FILTER_ALL)
+                )
             }
+            updateView()
+            return
         }
+        val preferences = PreferenceManager.getDefaultSharedPreferences(this)
+        val mode = preferences.getString("sensor_mode", "motion") ?: "motion"
+        if (mode != "manual" && !preferences.getBoolean("sensor_setup_" + mode, false)) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.sensor_setup_title)
+                .setMessage(
+                    if (mode == "sound") R.string.sensor_setup_sound
+                    else R.string.sensor_setup_motion
+                )
+                .setPositiveButton(R.string.sleep_action) { _, _ ->
+                    preferences.edit { putBoolean("sensor_setup_" + mode, true) }
+                    requestSensorPermissions()
+                }
+                .setNeutralButton(R.string.settings) { _, _ ->
+                    startActivity(Intent(this, PreferencesActivity::class.java))
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        } else requestSensorPermissions()
+    }
+
+    private fun requestSensorPermissions() {
+        val mode =
+            PreferenceManager.getDefaultSharedPreferences(this).getString("sensor_mode", "motion")
+        val permissions = mutableListOf<String>()
+        if (
+            mode == "sound" &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED
+        )
+            permissions.add(Manifest.permission.RECORD_AUDIO)
+        if (
+            mode != "manual" &&
+            Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        )
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        if (permissions.isEmpty()) startNewSession()
+        else sensorPermissions.launch(permissions.toTypedArray())
+    }
+
+    private fun startNewSession() {
+        if (DataModel.start != null && DataModel.stop == null) return
+        val preferences = PreferenceManager.getDefaultSharedPreferences(this)
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val mode = preferences.getString("sensor_mode", "motion") ?: "motion"
+        preferences.edit {
+            putInt("current_dnd", manager.currentInterruptionFilter)
+            putString("active_sensor_mode", mode)
+        }
+        DataModel.start = Calendar.getInstance().time
+        DataModel.stop = null
+        if (
+            preferences.getBoolean("enable_dnd", false) && manager.isNotificationPolicyAccessGranted
+        )
+            manager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+        if (mode != "manual")
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, StageTrackingService::class.java),
+            )
+        updateView()
     }
 
     private fun exportFileData() {
@@ -345,67 +500,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         importActivityResult.launch(intent)
     }
 
-    private fun createColorStateList(color: Int): ColorStateList {
-        return ColorStateList.valueOf(ContextCompat.getColor(this, color))
-    }
-
     private fun updateView() {
-        val status = findViewById<TextView>(R.id.status)
-        val startStopLayout = findViewById<LinearLayout>(R.id.start_stop_layout)
-        val startStop = findViewById<FloatingActionButton>(R.id.start_stop)
-        val startStopText = findViewById<TextView>(R.id.start_stop_text)
-
-        val dndManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val preferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val dndEnabled = preferences.getBoolean("enable_dnd", false)
-
-        if (DataModel.start != null && DataModel.stop != null) {
-            // When user stops tracking sleep
-            if (dndEnabled && dndManager.isNotificationPolicyAccessGranted) {
-                // Restore Do Not Disturb status when user started tracking
-                val filterAll = NotificationManager.INTERRUPTION_FILTER_ALL
-                dndManager.setInterruptionFilter(preferences.getInt("current_dnd", filterAll))
-            }
-
-            status.text = getString(R.string.tracking_stopped)
-            startStop.contentDescription = getString(R.string.start_again)
-            startStop.setImageResource(R.drawable.ic_start)
-            startStopText.text = getString(R.string.start)
-
-            // Set to custom, ~blue.
-            startStop.backgroundTintList = createColorStateList(R.color.colorFabPrimary)
-            startStopLayout.backgroundTintList = startStop.backgroundTintList
-
-            return
-        }
-
-        DataModel.start?.let { start ->
-            // When user starts tracking sleep
-            preferences.edit {
-                putInt("current_dnd", dndManager.currentInterruptionFilter)
-            }
-            if (dndEnabled && dndManager.isNotificationPolicyAccessGranted) {
-                val filterPri = NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                dndManager.setInterruptionFilter(filterPri)
-            }
-            status.text = String.format(
-                getString(R.string.sleeping_since),
-                DataModel.formatTimestamp(start, DataModel.getCompactView())
-            )
-            startStop.contentDescription = getString(R.string.stop)
-            startStop.setImageResource(R.drawable.ic_stop)
-            startStopText.text = getString(R.string.stop)
-
-            // Back to default, ~red.
-            startStop.backgroundTintList = createColorStateList(R.color.colorFabAccent)
-            startStopLayout.backgroundTintList = startStop.backgroundTintList
-
-            return
-        }
-
-        // Set to custom, ~blue.
-        startStop.backgroundTintList = createColorStateList(R.color.colorFabPrimary)
-        startStopLayout.backgroundTintList = startStop.backgroundTintList
+        val button = findViewById<ExpressiveSleepButton>(R.id.start_stop_layout)
+        val running = DataModel.start != null && DataModel.stop == null
+        button.setText(if (running) R.string.wake_action else R.string.sleep_action)
+        button.setIconResource(if (running) R.drawable.ic_sun else R.drawable.ic_moon)
+        button.contentDescription =
+            if (running)
+                getString(
+                    R.string.sensor_button_active,
+                    DataModel.formatTimestamp(DataModel.start!!, DataModel.getCompactView()),
+                )
+            else getString(R.string.sleep_action)
+        button.setTrackingState(running)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -435,7 +542,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 LibsBuilder()
                     .withActivityTitle(getString(R.string.about_toolbar))
                     .withAboutAppName(getString(R.string.app_name))
-                    .withActivityStyle(Libs.ActivityStyle.LIGHT_DARK_TOOLBAR)
+                    .withActivityTheme(R.style.AppTheme)
                     .withAboutDescription(getString(R.string.app_description))
                     .start(this)
                 return true
@@ -450,8 +557,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 return true
             }
             R.id.delete_all_sleep -> {
-                val builder = AlertDialog.Builder(this)
-                builder.setMessage(getString(R.string.delete_all_message))
+                val builder = MaterialAlertDialogBuilder(this)
+                builder
+                    .setMessage(getString(R.string.delete_all_message))
                     .setCancelable(false)
                     .setPositiveButton(getString(R.string.delete_all_positive)) { _, _ ->
                         viewModel.deleteAllSleep()
@@ -477,7 +585,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun checkCalendarPermissionGranted(
         granted: Map<String, Boolean>,
-        onSuccess: (UserCalendar) -> Unit
+        onSuccess: (UserCalendar) -> Unit,
     ) {
         // Check all permissions were granted
         if (granted.values.all { it }) {
@@ -486,14 +594,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         } else {
             // Permission denied
             Toast.makeText(
-                this, getString(R.string.calendar_permission_required), Toast.LENGTH_LONG
-            ).show()
+                this,
+                getString(R.string.calendar_permission_required),
+                Toast.LENGTH_LONG,
+            )
+                .show()
         }
     }
 
     private fun checkForCalendarPermission(
         permissionLauncher: ActivityResultLauncher<Array<String>>,
-        block: (UserCalendar) -> Unit
+        block: (UserCalendar) -> Unit,
     ) {
         when (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALENDAR)) {
             PackageManager.PERMISSION_GRANTED -> showUserCalendarPicker(block)
@@ -502,7 +613,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 permissionLauncher.launch(
                     arrayOf(
                         Manifest.permission.READ_CALENDAR,
-                        Manifest.permission.WRITE_CALENDAR
+                        Manifest.permission.WRITE_CALENDAR,
                     )
                 )
             }
@@ -530,9 +641,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             .setNeutralButton(getString(R.string.select_calendar_dialog_negative), null)
             .setPositiveButton(getString(R.string.select_calendar_dialog_positive)) { _, _ ->
                 block.invoke(calendars[selectedItem])
-            }.setSingleChoiceItems(titles, selectedItem) { _, newSelection ->
+            }
+            .setSingleChoiceItems(titles, selectedItem) { _, newSelection ->
                 selectedItem = newSelection
-            }.show()
+            }
+            .show()
     }
 
     private fun importCalendarData(selectedItem: UserCalendar) {
@@ -561,85 +674,91 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         // Schedule bedtime alarm
-        val bedTimeCalendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, bedHour)
-            set(Calendar.MINUTE, bedMinute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_MONTH, 1)
+        val bedTimeCalendar =
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, bedHour)
+                set(Calendar.MINUTE, bedMinute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= System.currentTimeMillis()) {
+                    add(Calendar.DAY_OF_MONTH, 1)
+                }
             }
-        }
-        val bedIntent = Intent(this, ReminderReceiver::class.java).apply {
-            putExtra("reminder_type", "bedtime")
-        }
-        val bedPendingIntent = PendingIntent.getBroadcast(
-            this,
-            100,
-            bedIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val bedIntent =
+            Intent(this, ReminderReceiver::class.java).apply {
+                putExtra("reminder_type", "bedtime")
+            }
+        val bedPendingIntent =
+            PendingIntent.getBroadcast(
+                this,
+                100,
+                bedIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         alarmManager.setRepeating(
             AlarmManager.RTC_WAKEUP,
             bedTimeCalendar.timeInMillis,
             AlarmManager.INTERVAL_DAY,
-            bedPendingIntent
+            bedPendingIntent,
         )
 
         // Schedule wakeup alarm
-        val wakeTimeCalendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, wakeHour)
-            set(Calendar.MINUTE, wakeMinute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_MONTH, 1)
+        val wakeTimeCalendar =
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, wakeHour)
+                set(Calendar.MINUTE, wakeMinute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= System.currentTimeMillis()) {
+                    add(Calendar.DAY_OF_MONTH, 1)
+                }
             }
-        }
-        val wakeIntent = Intent(this, ReminderReceiver::class.java).apply {
-            putExtra("reminder_type", "wakeup")
-        }
-        val wakePendingIntent = PendingIntent.getBroadcast(
-            this,
-            101,
-            wakeIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val wakeIntent =
+            Intent(this, ReminderReceiver::class.java).apply {
+                putExtra("reminder_type", "wakeup")
+            }
+        val wakePendingIntent =
+            PendingIntent.getBroadcast(
+                this,
+                101,
+                wakeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         alarmManager.setRepeating(
             AlarmManager.RTC_WAKEUP,
             wakeTimeCalendar.timeInMillis,
             AlarmManager.INTERVAL_DAY,
-            wakePendingIntent
+            wakePendingIntent,
         )
     }
 
     private fun cancelReminders() {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val bedIntent = Intent(this, ReminderReceiver::class.java).apply {
-            putExtra("reminder_type", "bedtime")
-        }
-        val bedPendingIntent = PendingIntent.getBroadcast(
-            this,
-            100,
-            bedIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager.cancel(
-            bedPendingIntent
-        )
+        val bedIntent =
+            Intent(this, ReminderReceiver::class.java).apply {
+                putExtra("reminder_type", "bedtime")
+            }
+        val bedPendingIntent =
+            PendingIntent.getBroadcast(
+                this,
+                100,
+                bedIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        alarmManager.cancel(bedPendingIntent)
 
-        val wakeIntent = Intent(this, ReminderReceiver::class.java).apply {
-            putExtra("reminder_type", "wakeup")
-        }
-        val wakePendingIntent = PendingIntent.getBroadcast(
-            this,
-            101,
-            wakeIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager.cancel(
-            wakePendingIntent
-        )
+        val wakeIntent =
+            Intent(this, ReminderReceiver::class.java).apply {
+                putExtra("reminder_type", "wakeup")
+            }
+        val wakePendingIntent =
+            PendingIntent.getBroadcast(
+                this,
+                101,
+                wakeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        alarmManager.cancel(wakePendingIntent)
     }
 
     companion object {

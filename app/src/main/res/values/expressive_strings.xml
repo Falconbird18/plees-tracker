@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="sleep_tab">Sleep</string>
+  <string name="statistics_tab">Statistics</string>
+  <string name="rest_title">Make room for rest.</string>
+  <string name="rest_subtitle">A little wind-down. A fresh start tomorrow.</string>
+  <string name="sleep_history">Your sleep journal</string>
+  <string name="sleep_ready">Ready when you are</string>
+  <string name="tracking_active">Sweet dreams.</string>
+  <string name="tracking_finished">Hello, refreshed you.</string>
+  <string name="sleep_action">Let’s sleep</string>
+  <string name="wake_action">I’m awake</string>
+  <string name="stats_title">Find your rhythm.</string>
+  <string name="stats_subtitle">Small patterns. Brighter mornings.</string>
+  <string name="explore_graphs">Explore sleep trends</string>
+  <string name="all_statistics">Compare all time periods</string>
+  <string name="palette_title">Color your nights</string>
+  <string-array name="palette_names">
+    <item>Material You · wallpaper colors</item>
+    <item>Electric lilac</item>
+    <item>Sunset coral</item>
+    <item>Lagoon blue</item>
+  </string-array>
+  <string-array name="palette_values">
+    <item>system</item>
+    <item>lilac</item>
+    <item>coral</item>
+    <item>ocean</item>
+  </string-array>
+  <string name="onboard_title">Better nights,
+your way.</string>
+  <string
+      name="onboard_body">Tap when you settle in. Tap when you wake. Choose mattress motion or nightstand sound levels for experimental sleep-stage estimates. Prefer a simple timer? Turn sensors off in Settings.</string>
+  <string name="onboard_patterns">Meet your sleep rhythm</string>
+  <string
+      name="onboard_patterns_body">Explore trends, rate your rest, and leave a note for tomorrow. Your records stay on your device unless you choose to export or sync them.</string>
+  <string name="onboard_colors">A little more you.</string>
+  <string
+      name="onboard_colors_body">Pick a palette now. Change it any time in Settings. Material You follows your wallpaper on Android 12 and newer.</string>
+  <string name="onboard_next">Next</string>
+  <string name="onboard_done">Let’s begin</string>
+  <string name="onboard_skip">Skip introduction</string>
+  <string name="replay_intro">Replay introduction</string>
+  <string name="journal_empty">Your first night starts here.
+Tap “Let’s sleep” when you’re ready.</string>
+  <string name="sleep_moon_description">A playful crescent moon and stars</string>
+  <string name="edit_hint">Tap a date or time to adjust it. Changes save automatically.</string>
+  <string name="intro_step">%1$d of 3</string>
+  <string name="last_night_goal">Your latest rest</string>
+  <string name="goal_summary">%1$s of your %2$s h sleep goal</string>
+  <string name="goal_empty">Your next sleep will appear here.</string>
+  <string name="rest_rating">How was your rest?</string>
+  <string name="sensor_button_active">Tracking since %1$s. I’m awake. Tap to stop.</string>
+</resources>

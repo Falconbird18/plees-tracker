@@ -18,47 +18,43 @@ import androidx.recyclerview.widget.RecyclerView
 import java.util.ArrayList
 import java.util.Date
 
-/**
- * This is the adapter between RecyclerView and SleepDao.
- */
-class SleepsAdapter(
-    private val preferences: SharedPreferences
-) : RecyclerView.Adapter<SleepsAdapter.SleepViewHolder>() {
+/** This is the adapter between RecyclerView and SleepDao. */
+class SleepsAdapter(private val preferences: SharedPreferences) :
+    RecyclerView.Adapter<SleepsAdapter.SleepViewHolder>() {
     var data: List<Sleep> = ArrayList()
         set(newData) {
             val previousData = field
             field = newData
-            DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-                override fun getOldListSize(): Int {
-                    return previousData.size
-                }
+            DiffUtil.calculateDiff(
+                object : DiffUtil.Callback() {
+                    override fun getOldListSize(): Int {
+                        return previousData.size
+                    }
 
-                override fun getNewListSize(): Int {
-                    return newData.size
-                }
+                    override fun getNewListSize(): Int {
+                        return newData.size
+                    }
 
-                /**
-                 * Compares old and new based on their ID only.
-                 */
-                override fun areItemsTheSame(
-                    oldItemPosition: Int,
-                    newItemPosition: Int
-                ): Boolean {
-                    val oldSid = previousData[oldItemPosition].sid
-                    val newSid = newData[newItemPosition].sid
-                    return oldSid == newSid
-                }
+                    /** Compares old and new based on their ID only. */
+                    override fun areItemsTheSame(
+                        oldItemPosition: Int,
+                        newItemPosition: Int,
+                    ): Boolean {
+                        val oldSid = previousData[oldItemPosition].sid
+                        val newSid = newData[newItemPosition].sid
+                        return oldSid == newSid
+                    }
 
-                /**
-                 * Compares old and new based on their value.
-                 */
-                override fun areContentsTheSame(
-                    oldItemPosition: Int,
-                    newItemPosition: Int
-                ): Boolean {
-                    return previousData[oldItemPosition] == newData[newItemPosition]
+                    /** Compares old and new based on their value. */
+                    override fun areContentsTheSame(
+                        oldItemPosition: Int,
+                        newItemPosition: Int,
+                    ): Boolean {
+                        return previousData[oldItemPosition] == newData[newItemPosition]
+                    }
                 }
-            }).dispatchUpdatesTo(this)
+            )
+                .dispatchUpdatesTo(this)
         }
 
     var clickCallback: View.OnClickListener? = null
@@ -69,10 +65,10 @@ class SleepsAdapter(
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
-        viewType: Int
+        viewType: Int,
     ): SleepViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.layout_sleep_item, parent, false)
+        val view =
+            LayoutInflater.from(parent.context).inflate(R.layout.layout_sleep_item, parent, false)
         clickCallback?.let {
             view.setOnClickListener(it)
         }
@@ -87,17 +83,25 @@ class SleepsAdapter(
         val durationText = DataModel.formatDuration(durationMS / 1000, DataModel.getCompactView())
         holder.duration.text = durationText
 
-        if (preferences.getBoolean("show_awake_for", false)) {
-            val nextSleepReferenceTime = if (position == 0) {
-                System.currentTimeMillis()
-            } else {
-                data[position - 1].start
-            }
+        val showAwake = preferences.getBoolean("show_awake_for", false)
+        holder.durationWake.visibility = if (showAwake) View.VISIBLE else View.GONE
+        holder.durationWakeHeader.visibility = holder.durationWake.visibility
+        holder.durationWakeImage.visibility = View.GONE
+        holder.rating.visibility =
+            if (preferences.getBoolean("show_rating", false)) View.VISIBLE else View.GONE
+        if (showAwake) {
+            val nextSleepReferenceTime =
+                if (position == 0) {
+                    System.currentTimeMillis()
+                } else {
+                    data[position - 1].start
+                }
             val durationWakeMS = nextSleepReferenceTime - sleep.stop
-            val durationWakeText = DataModel.formatDuration(
-                durationWakeMS / 1000,
-                DataModel.getCompactView()
-            )
+            val durationWakeText =
+                DataModel.formatDuration(
+                    durationWakeMS / 1000,
+                    DataModel.getCompactView(),
+                )
             holder.durationWake.text = durationWakeText
         } else {
             holder.durationWakeImage.visibility = View.GONE
@@ -123,9 +127,7 @@ class SleepsAdapter(
         }
     }
 
-    /**
-     * The view holder holds all views that will display one Sleep.
-     */
+    /** The view holder holds all views that will display one Sleep. */
     inner class SleepViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val start: TextView = view.findViewById(R.id.sleep_item_start)
         val stop: TextView = view.findViewById(R.id.sleep_item_stop)

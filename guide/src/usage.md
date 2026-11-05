@@ -1,10 +1,16 @@
 # Usage
 
+## First launch and appearance
+
+The introduction explains manual tracking and privacy. Skip it at any point, or complete all three pages and pick a palette. Replay it from Settings → Theme → Replay introduction.
+
+Settings → Color your nights offers wallpaper-based Material You, Electric lilac, Sunset coral, and Lagoon blue. Wallpaper colors require Android 12 or newer; older Android versions use lilac. All palettes support system, light, and dark appearance.
+
 ## Main activity
 
 plees-tracker is essentially a stopwatch application. It intentionally requires you to manually
 track your sleep with explicitly starting and ending a tracked sleep. This has the benefit that it's
-simple: causing no battery drain, nor any privacy problems.
+simple. In Simple timer mode it does no sensor work overnight. Optional mattress motion and nightstand sound-level modes estimate stages on-device and use additional battery.
 
 This activity allows:
 
@@ -23,7 +29,9 @@ This activity allows:
 
 - Tapping on a sleep allows getting to a dedicated sleep activity for a single sleep.
 
-- A floating action button at the bottom right corner allows to actually start / stop the tracking.
+- The large “Let’s sleep” / “I’m awake” button starts or stops tracking.
+
+- The Sleep tab contains only the large sleep/wake button. Statistics contains the journal, latest-rest goal progress, experimental stage estimates, period chips, and configurable dashboard. Its buttons open trend graphs and all-period comparisons.
 
 The menu of this activity allows:
 
@@ -211,7 +219,7 @@ all possible durations, specifically:
 ## Graphs activity
 
 The graphs activity provides an alternative way to analyze your sleep data. Currently, the following
-graphs are provided (select the graph via the menu in the upper right):
+graphs are provided (select the graph using the chips above the chart or the menu in the upper right):
 
 - Deficit/surplus: This graph shows the difference between the ideal sleep length (as customized in
   settings) versus the actual hours slept per day - positive is surplus, negative is deficit - along

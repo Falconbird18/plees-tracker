@@ -11,8 +11,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
 import com.github.mikephil.charting.charts.LineChart
@@ -26,10 +24,11 @@ import java.util.Date
 import kotlin.math.sqrt
 
 /** This activity provides graphs of sleep data, filtered by the selected dashboard duration. */
-class GraphsActivity : AppCompatActivity() {
+class GraphsActivity : ExpressiveActivity() {
     companion object {
         private const val KEY_SELECTED_CHART = "selected_chart"
     }
+
     private lateinit var preferences: SharedPreferences
     private lateinit var viewModel: MainViewModel
     private lateinit var chart: LineChart
@@ -45,10 +44,15 @@ class GraphsActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         outState.putInt(KEY_SELECTED_CHART, selectedChartId)
     }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.graph_deficit, R.id.graph_length, R.id.graph_start,
-            R.id.graph_stop, R.id.graph_rating, R.id.graph_variance -> {
+            R.id.graph_deficit,
+            R.id.graph_length,
+            R.id.graph_start,
+            R.id.graph_stop,
+            R.id.graph_rating,
+            R.id.graph_variance -> {
                 selectedChartId = item.itemId
                 renderChartById(selectedChartId)
             }
@@ -70,14 +74,14 @@ class GraphsActivity : AppCompatActivity() {
         title = getString(R.string.graphs)
 
         // Show a back button.
-        actionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         selectedChartId = savedInstanceState?.getInt(KEY_SELECTED_CHART) ?: R.id.graph_deficit
 
         preferences = PreferenceManager.getDefaultSharedPreferences(application)
 
-        viewModel = ViewModelProvider.AndroidViewModelFactory(application)
-            .create(MainViewModel::class.java)
+        viewModel =
+            ViewModelProvider.AndroidViewModelFactory(application).create(MainViewModel::class.java)
 
         // The chart is reused for all different graphs. Below are settings which are the same
         // across all possible graphs.
@@ -88,26 +92,68 @@ class GraphsActivity : AppCompatActivity() {
 
         chart.xAxis.valueFormatter = DateAxisFormatter()
         chart.xAxis.labelRotationAngle = -30f
-        chart.xAxis.textColor = ContextCompat.getColor(this, R.color.textColor)
+        chart.xAxis.textColor =
+            com.google.android.material.color.MaterialColors.getColor(
+                chart,
+                com.google.android.material.R.attr.colorOnSurface,
+            )
         chart.xAxis.textSize = 10f
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         chart.xAxis.setDrawGridLines(false)
 
-        chart.axisLeft.textColor = ContextCompat.getColor(this, R.color.textColor)
+        chart.axisLeft.textColor =
+            com.google.android.material.color.MaterialColors.getColor(
+                chart,
+                com.google.android.material.R.attr.colorOnSurface,
+            )
         chart.axisLeft.textSize = 12f
         chart.axisRight.isEnabled = false
 
-        chart.legend.textColor = ContextCompat.getColor(this, R.color.textColor)
+        chart.legend.textColor =
+            com.google.android.material.color.MaterialColors.getColor(
+                chart,
+                com.google.android.material.R.attr.colorOnSurface,
+            )
         chart.legend.textSize = 12f
         chart.legend.verticalAlignment = Legend.LegendVerticalAlignment.TOP
         chart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT
 
         chartAxisLeftLabel = findViewById(R.id.chart_axis_left_label)
 
+        val choices = findViewById<com.google.android.material.chip.ChipGroup>(R.id.graph_choices)
+        listOf(
+            R.id.graph_deficit to R.string.graph_deficit,
+            R.id.graph_length to R.string.graph_length,
+            R.id.graph_start to R.string.graph_start,
+            R.id.graph_stop to R.string.graph_stop,
+            R.id.graph_rating to R.string.graph_rating,
+            R.id.graph_variance to R.string.graph_variance,
+        )
+            .forEach { (id, label) ->
+                val chip =
+                    com.google.android.material.chip.Chip(this).apply {
+                        this.id = id
+                        setText(label)
+                        isCheckable = true
+                        isChecked = id == selectedChartId
+                        minHeight = (48 * resources.displayMetrics.density).toInt()
+                    }
+                choices.addView(chip)
+            }
+        choices.setOnCheckedStateChangeListener { _, ids ->
+            ids.firstOrNull()?.let {
+                selectedChartId = it
+                renderChartById(it)
+            }
+        }
         // Render the restored (or default) chart.
         renderChartById(selectedChartId)
     }
+
     private fun renderChartById(itemId: Int): Boolean {
+        viewModel.durationSleepsLive.removeObservers(this)
+        chart.clear()
+        chart.invalidate()
         return when (itemId) {
             R.id.graph_deficit -> renderDeficitChart()
             R.id.graph_length -> renderLengthChart()
@@ -122,25 +168,34 @@ class GraphsActivity : AppCompatActivity() {
     private fun renderDeficitChart(): Boolean {
         title = getString(R.string.graph_deficit)
 
-        viewModel.durationSleepsLive.observe(
-            this
-        ) { sleeps ->
+        viewModel.durationSleepsLive.observe(this) { sleeps ->
             if (sleeps != null && sleeps.isNotEmpty()) {
-                val deficitByDay = sleeps.lengthPerDay()
-                    .map { (day, length) -> day to length - getIdealSleep() }
+                val deficitByDay =
+                    sleeps.lengthPerDay().map { (day, length) -> day to length - getIdealSleep() }
                 val deficitSum = deficitByDay.cumulativeSum()
 
-                val deficitDataSet = deficitByDay.toDataSet(
-                    R.string.graph_deficit,
-                    ContextCompat.getColor(this, R.color.dash_daily)
-                )
-                val deficitSumDataSet = deficitSum.toDataSet(
-                    R.string.graph_total,
-                    ContextCompat.getColor(this, R.color.dash_average)
-                )
+                val deficitDataSet =
+                    deficitByDay.toDataSet(
+                        R.string.graph_deficit,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            androidx.appcompat.R.attr.colorPrimary,
+                        ),
+                    )
+                val deficitSumDataSet =
+                    deficitSum.toDataSet(
+                        R.string.graph_total,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            com.google.android.material.R.attr.colorTertiary,
+                        ),
+                    )
                 deficitSumDataSet.setDrawFilled(true)
                 deficitSumDataSet.fillColor =
-                    ContextCompat.getColor(this, R.color.dash_average)
+                    com.google.android.material.color.MaterialColors.getColor(
+                        chart,
+                        com.google.android.material.R.attr.colorTertiary,
+                    )
                 deficitSumDataSet.fillAlpha = 65
 
                 renderChart {
@@ -157,21 +212,27 @@ class GraphsActivity : AppCompatActivity() {
     private fun renderLengthChart(): Boolean {
         title = getString(R.string.graph_length)
 
-        viewModel.durationSleepsLive.observe(
-            this
-        ) { sleeps ->
+        viewModel.durationSleepsLive.observe(this) { sleeps ->
             if (sleeps != null && sleeps.isNotEmpty()) {
                 val lengthPerDay = sleeps.lengthPerDay()
                 val lengthAvg = lengthPerDay.cumulativeAverage()
 
-                val lengthDataSet = lengthPerDay.toDataSet(
-                    R.string.graph_length,
-                    ContextCompat.getColor(this, R.color.dash_daily)
-                )
-                val lengthAvgDataSet = lengthAvg.toDataSet(
-                    R.string.graph_average,
-                    ContextCompat.getColor(this, R.color.dash_average)
-                )
+                val lengthDataSet =
+                    lengthPerDay.toDataSet(
+                        R.string.graph_length,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            androidx.appcompat.R.attr.colorPrimary,
+                        ),
+                    )
+                val lengthAvgDataSet =
+                    lengthAvg.toDataSet(
+                        R.string.graph_average,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            com.google.android.material.R.attr.colorTertiary,
+                        ),
+                    )
 
                 renderChart {
                     chart.axisLeft.valueFormatter = FloatAxisFormatter()
@@ -187,21 +248,27 @@ class GraphsActivity : AppCompatActivity() {
     private fun renderStartChart(): Boolean {
         title = getString(R.string.graph_start)
 
-        viewModel.durationSleepsLive.observe(
-            this
-        ) { sleeps ->
+        viewModel.durationSleepsLive.observe(this) { sleeps ->
             if (sleeps != null && sleeps.isNotEmpty()) {
                 val startByDay = sleeps.startOfSleepByDay()
                 val startAvg = startByDay.cumulativeAverage()
 
-                val startDataSet = startByDay.toDataSet(
-                    R.string.graph_start,
-                    ContextCompat.getColor(this, R.color.dash_daily)
-                )
-                val startAvgDataSet = startAvg.toDataSet(
-                    R.string.graph_average,
-                    ContextCompat.getColor(this, R.color.dash_average)
-                )
+                val startDataSet =
+                    startByDay.toDataSet(
+                        R.string.graph_start,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            androidx.appcompat.R.attr.colorPrimary,
+                        ),
+                    )
+                val startAvgDataSet =
+                    startAvg.toDataSet(
+                        R.string.graph_average,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            com.google.android.material.R.attr.colorTertiary,
+                        ),
+                    )
 
                 renderChart {
                     chart.axisLeft.valueFormatter = TimeAxisFormatter()
@@ -216,21 +283,27 @@ class GraphsActivity : AppCompatActivity() {
     private fun renderStopChart(): Boolean {
         title = getString(R.string.graph_stop)
 
-        viewModel.durationSleepsLive.observe(
-            this
-        ) { sleeps ->
+        viewModel.durationSleepsLive.observe(this) { sleeps ->
             if (sleeps != null && sleeps.isNotEmpty()) {
                 val stopByDay = sleeps.stopOfSleepByDay()
                 val stopAvg = stopByDay.cumulativeAverage()
 
-                val stopDataSet = stopByDay.toDataSet(
-                    R.string.graph_stop,
-                    ContextCompat.getColor(this, R.color.dash_daily)
-                )
-                val stopAvgDataSet = stopAvg.toDataSet(
-                    R.string.graph_average,
-                    ContextCompat.getColor(this, R.color.dash_average)
-                )
+                val stopDataSet =
+                    stopByDay.toDataSet(
+                        R.string.graph_stop,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            androidx.appcompat.R.attr.colorPrimary,
+                        ),
+                    )
+                val stopAvgDataSet =
+                    stopAvg.toDataSet(
+                        R.string.graph_average,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            com.google.android.material.R.attr.colorTertiary,
+                        ),
+                    )
 
                 renderChart {
                     chart.axisLeft.valueFormatter = TimeAxisFormatter()
@@ -245,21 +318,27 @@ class GraphsActivity : AppCompatActivity() {
     private fun renderRatingChart(): Boolean {
         title = getString(R.string.graph_rating)
 
-        viewModel.durationSleepsLive.observe(
-            this
-        ) { sleeps ->
+        viewModel.durationSleepsLive.observe(this) { sleeps ->
             if (sleeps != null && sleeps.isNotEmpty()) {
                 val ratingByDay = sleeps.ratingByDay()
                 val ratingAvg = ratingByDay.cumulativeAverage()
 
-                val ratingDataSet = ratingByDay.toDataSet(
-                    R.string.graph_rating,
-                    ContextCompat.getColor(this, R.color.dash_daily)
-                )
-                val ratingAvgDataSet = ratingAvg.toDataSet(
-                    R.string.graph_average,
-                    ContextCompat.getColor(this, R.color.dash_average)
-                )
+                val ratingDataSet =
+                    ratingByDay.toDataSet(
+                        R.string.graph_rating,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            androidx.appcompat.R.attr.colorPrimary,
+                        ),
+                    )
+                val ratingAvgDataSet =
+                    ratingAvg.toDataSet(
+                        R.string.graph_average,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            com.google.android.material.R.attr.colorTertiary,
+                        ),
+                    )
 
                 renderChart {
                     chart.axisLeft.valueFormatter = FloatAxisFormatter()
@@ -277,21 +356,27 @@ class GraphsActivity : AppCompatActivity() {
     private fun renderVarianceChart(): Boolean {
         title = getString(R.string.graph_variance)
 
-        viewModel.durationSleepsLive.observe(
-            this
-        ) { sleeps ->
+        viewModel.durationSleepsLive.observe(this) { sleeps ->
             if (sleeps != null && sleeps.isNotEmpty()) {
                 val varianceByDay = sleeps.cumulativeVariance()
                 val deviationByDay = varianceByDay.varianceToDeviation()
 
-                val varianceDataSet = varianceByDay.toDataSet(
-                    R.string.graph_variance,
-                    ContextCompat.getColor(this, R.color.dash_daily)
-                )
-                val deviationAvgDataSet = deviationByDay.toDataSet(
-                    R.string.graph_deviation,
-                    ContextCompat.getColor(this, R.color.dash_average)
-                )
+                val varianceDataSet =
+                    varianceByDay.toDataSet(
+                        R.string.graph_variance,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            androidx.appcompat.R.attr.colorPrimary,
+                        ),
+                    )
+                val deviationAvgDataSet =
+                    deviationByDay.toDataSet(
+                        R.string.graph_deviation,
+                        com.google.android.material.color.MaterialColors.getColor(
+                            chart,
+                            com.google.android.material.R.attr.colorTertiary,
+                        ),
+                    )
 
                 renderChart {
                     chart.axisLeft.valueFormatter = FloatAxisFormatter()
@@ -336,14 +421,15 @@ class GraphsActivity : AppCompatActivity() {
     private fun List<Pair<Number, Number>>.toDataSet(label_key: Int, color: Int): LineDataSet {
         return LineDataSet(
             map { (day, value) -> Entry(day.toFloat(), value.toFloat()) },
-            getString(label_key)
-        ).apply {
-            lineWidth = if (size > 250) 2f else 3f
-            this.color = color
-            setDrawCircles(false)
-            setDrawCircleHole(false)
-            setDrawValues(false)
-        }
+            getString(label_key),
+        )
+            .apply {
+                lineWidth = if (size > 250) 2f else 3f
+                this.color = color
+                setDrawCircles(false)
+                setDrawCircleHole(false)
+                setDrawValues(false)
+            }
     }
 
     /** Given a list of sleeps, returns list of day-rating pairs, sorted by day. */
@@ -447,7 +533,9 @@ fun <K : Number> Sequence<Pair<K, Number>>.cumulativeVariance(): Sequence<Pair<K
 }
 
 fun List<Pair<Number, Number>>.varianceToDeviation(): List<Pair<Number, Number>> =
-    map { (date, num) -> date to sqrt(num.toFloat()) }
+    map { (date, num) ->
+        date to sqrt(num.toFloat())
+    }
 
 /** Generates a cumulative sum list of the provided day-value points. */
 fun List<Pair<Number, Number>>.cumulativeSum(): List<Pair<Number, Number>> {
@@ -463,13 +551,15 @@ fun Long.stripTime(): Long = Date(this).stripTime().time
 
 /** Strips the time from a [Date], leaving only the date. */
 fun Date.stripTime(): Date {
-    return Calendar.getInstance().apply {
-        time = this@stripTime
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.time
+    return Calendar.getInstance()
+        .apply {
+            time = this@stripTime
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        .time
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

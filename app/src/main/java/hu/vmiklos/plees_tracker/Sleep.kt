@@ -12,40 +12,31 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/**
- * Represents one tracked sleep.
- */
+/** Represents one tracked sleep. */
 @Entity(indices = [Index(value = ["health_connect_id"])])
 class Sleep {
-    @PrimaryKey(autoGenerate = true)
-    var sid: Int = 0
+    @PrimaryKey(autoGenerate = true) var sid: Int = 0
 
-    @ColumnInfo(name = "start_date")
-    var start: Long = 0
+    @ColumnInfo(name = "start_date") var start: Long = 0
 
-    @ColumnInfo(name = "stop_date")
-    var stop: Long = 0
+    @ColumnInfo(name = "stop_date") var stop: Long = 0
 
-    @ColumnInfo(name = "rating")
-    var rating: Long = 0
+    @ColumnInfo(name = "rating") var rating: Long = 0
 
-    @ColumnInfo(name = "comment")
-    var comment: String = ""
+    @ColumnInfo(name = "comment") var comment: String = ""
 
-    @ColumnInfo(name = "wakes")
-    var wakes: Int = 0
+    @ColumnInfo(name = "wakes") var wakes: Int = 0
+
+    @ColumnInfo(name = "sensor_data", defaultValue = "''") var sensorData: String = ""
 
     // Identifies the record across devices, where sid values can collide.
-    @ColumnInfo(name = "health_connect_id")
-    var healthConnectId: String = ""
+    @ColumnInfo(name = "health_connect_id") var healthConnectId: String = ""
 
     // Incremented on edits and sent to Health Connect to order updates.
-    @ColumnInfo(name = "health_connect_version")
-    var healthConnectVersion: Long = 0
+    @ColumnInfo(name = "health_connect_version") var healthConnectVersion: Long = 0
 
     // Stores the last uploaded healthConnectVersion; unequal values mean a write is pending.
-    @ColumnInfo(name = "health_connect_synced_version")
-    var healthConnectSyncedVersion: Long = -1
+    @ColumnInfo(name = "health_connect_synced_version") var healthConnectSyncedVersion: Long = -1
 
     private val lengthMs
         get() = stop - start
