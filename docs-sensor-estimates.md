@@ -6,7 +6,7 @@ Plees offers three modes in Settings → Sleep sensing:
 - **Nightstand sound levels:** microphone samples at 16 kHz are reduced immediately to RMS sound levels. Raw PCM is overwritten in a reusable memory buffer. No audio clips are stored, transmitted, or analyzed for speech. This is passive ambient-level sensing, not sonar.
 - **Simple timer:** no microphone, movement sensing, or sensor wake lock. The original start/stop workflow remains available.
 
-The large button is the only content in the Sleep tab. The journal, latest-rest summary, estimated stages, and statistics live in Statistics. Tap a journal entry to inspect its individual timeline and edit its times, rating, wakes, and notes.
+The large button is the only content in the Sleep tab. The Night page coordinates one selected rest’s stage ring, timeline, and goals. History contains aggregate charts and the journal. Tap a journal entry or chart bar to open a night; “Notes & edit this rest” opens the editor. Missing sensor intervals remain unavailable in both the ring and stacked bars.
 
 ## What the labels mean
 

@@ -102,6 +102,14 @@ class MainActivityTest {
         // Given no sleeps and creating one:
         DataModel.database.clearAllTables()
         createSleep()
+        runBlocking {
+            DataModel.database.sleepDao().insert(
+                Sleep().apply {
+                    stop = System.currentTimeMillis() - 10 * 86400000L
+                    start = stop - 8 * 3600000L
+                }
+            )
+        }
         idle()
 
         // Then make sure the sleep count widget reads the correct value:
@@ -130,7 +138,7 @@ class MainActivityTest {
             .findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
                 R.id.navigation
             )
-            .selectedItemId = R.id.nav_statistics
+            .selectedItemId = R.id.nav_history
         idle()
         val recyclerView = activity.findViewById<RecyclerView>(R.id.sleeps)
         val viewHolder =

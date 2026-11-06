@@ -4,5 +4,9 @@
   <item
       android:id="@+id/nav_statistics"
       android:icon="@drawable/ic_insights"
-      android:title="@string/statistics_tab"/>
+      android:title="@string/night_tab"/>
+  <item
+      android:id="@+id/nav_history"
+      android:icon="@drawable/ic_history"
+      android:title="@string/history_tab"/>
 </menu>

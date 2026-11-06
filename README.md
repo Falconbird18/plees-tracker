@@ -5,7 +5,9 @@
 A bold, colorful Material 3 Expressive redesign of [Plees Tracker](https://github.com/vmiklos/plees-tracker), an open-source Android sleep tracker.
 
 - **Sleep:** one oversized Material 3 Expressive sleep/wake button that morphs between the official scalloped Cookie 9 and Sunny shapes.
-- **Statistics:** period filters, configurable averages, the sleep journal, stage estimates, comparisons, and all six trend selectors.
+- **Night:** a coordinated stage ring and overnight timeline, oversized logged-rest numbers, a scalloped goal badge, and bedtime/wake-up comparisons. Pick any recorded rest and every night chart updates together.
+- **History:** daily stacked stage bars, goal-versus-logged-rest trends, monthly/yearly averages, a weekly consistency garden, and a scrolling journal. Tap a bar or journal entry to open that night.
+- **Editable goals:** duration, bedtime, wake-up time, and 1–7 consistent nights per week. Schedule goals are independent of reminders.
 - **Make it yours:** wallpaper-based Material You colors on Android 12+, plus Electric lilac, Sunset coral, and Lagoon blue; light, dark, and system modes.
 - **A gentle start:** a skippable three-page introduction and palette selection, replayable from Settings.
 - **Expressive throughout:** Material 3 Expressive themes, generous shapes, tonal cards, Material switches, date/time pickers, bottom navigation, and wavy goal progress.
@@ -14,7 +16,7 @@ Existing Room data, CSV/calendar import and export, undoable swipe deletion, not
 
 ### Phone sleep sensing
 
-Choose mattress motion, nightstand sound levels, or the original sensor-free timer in Settings. Estimated awake/light/deep/REM timelines appear in Statistics and individual sleep details. These are experimental heuristics, not clinically measured stages. No raw audio is stored. See [sensor behavior, storage, and validation limits](docs-sensor-estimates.md).
+Choose mattress motion, nightstand sound levels, or the original sensor-free timer in Settings. Estimated awake/light/deep/REM timelines appear in Night and individual sleep details. These are experimental heuristics, not clinically measured stages. No raw audio is stored. See [sensor behavior, storage, and validation limits](docs-sensor-estimates.md).
 
 ### Build
 
@@ -29,7 +31,7 @@ The minimum Android version remains Android 7 (API 24). Wallpaper colors gracefu
 
 Google Drive needs your own Android OAuth client configuration, as documented in the [user guide](guide/src/usage.md#google-drive). Health Connect and calendar access remain opt-in.
 
-The test suite covers the existing sleep/data/backup logic plus Material time editing, tab restoration, onboarding completion, and palette fallback. `ExpressiveScreenshotsTest` renders Android views into `app/build/screenshots/` for visual review.
+The test suite covers the existing sleep/data/backup logic plus Material time editing, night selection/restoration, goal persistence and cancellation, midnight/DST calendar math, stage coverage, monthly aggregation, onboarding, and palette fallback. `ExpressiveScreenshotsTest` renders Android views into `app/build/screenshots/` for visual review.
 
 ---
 

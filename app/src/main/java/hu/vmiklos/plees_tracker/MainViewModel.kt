@@ -15,27 +15,18 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
-import java.util.Calendar
 import java.util.Date
 import kotlinx.coroutines.launch
 
-/**
- * This is the view model of MainActivity, providing coroutine scopes.
- */
+/** This is the view model of MainActivity, providing coroutine scopes. */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val preferences = PreferenceManager.getDefaultSharedPreferences(application)
 
     val durationSleepsLive: LiveData<List<Sleep>> =
-        preferences.liveData("dashboard_duration", "0").switchMap { durationStr ->
+        preferences.liveData("dashboard_duration", "-7").switchMap { durationStr ->
             val duration = durationStr?.toInt() ?: 0
-            val date = if (duration == 0) {
-                Date(0)
-            } else {
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.DATE, duration)
-                cal.time
-            }
+            val date = Date(RestInsights.historyStart(duration, System.currentTimeMillis()))
             DataModel.getSleepsAfterLive(date)
         }
 

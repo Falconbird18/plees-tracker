@@ -27,11 +27,21 @@ This activity allows:
 
 - Swiping a sleep left/right will remove the sleep.
 
-- Tapping on a sleep allows getting to a dedicated sleep activity for a single sleep.
+- Tapping a journal entry opens its Night dashboard. “Notes & edit this rest” opens the existing sleep editor.
 
 - The large “Let’s sleep” / “I’m awake” button starts or stops tracking.
 
-- The Sleep tab contains only the large sleep/wake button. Statistics contains the journal, latest-rest goal progress, experimental stage estimates, period chips, and configurable dashboard. Its buttons open trend graphs and all-period comparisons.
+- **Sleep** contains only the large sleep/wake button.
+
+- **Night** shows one selected rest: logged duration and goal progress, a tappable stage-distribution ring, the overnight stage timeline, schedule comparisons, and the consistency garden. Use the previous/next buttons, date picker list, recent-night chips, or History to choose a record. All of the night’s charts update together.
+
+- **History** shows period filters, tracked-rest totals, average duration per tracked day, stacked stage bars, duration-versus-goal trends, a consistency garden, and the scrolling journal. Tap a daily bar to open that day’s longest rest. Monthly/yearly bars open the most recent record in that period. Advanced trend graphs and all-period comparisons remain available at the bottom.
+
+- **Tune your goals** opens a sheet for duration (2–14 hours in half-hour steps), bedtime, wake-up time, and 1–7 consistent nights per week. Save commits all four targets; dismissing the sheet leaves them unchanged. These schedule targets never enable or modify reminders.
+
+- A consistent night begins and ends within 30 minutes of the two schedule targets; the longest rest on each wake date is used. Missing days stay missing. Night’s garden covers seven calendar days ending on the selected rest’s wake date; History’s garden covers the most recent seven days.
+
+- Year and All time charts use daily averages over tracked days, grouped into months (or years for longer histories), so the duration-goal line remains comparable. Weekly and monthly views show daily sums. Unrecorded days/months create gaps; rests without usable sensor data remain unavailable in stage charts.
 
 The menu of this activity allows:
 

@@ -20,7 +20,6 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
@@ -51,6 +50,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ExpressiveActivity(), View.OnClickListener {
 
     private lateinit var viewModel: MainViewModel
+    private lateinit var restDashboard: RestDashboard
 
     // SharedPreferences keeps listeners in a WeakHashMap, so keep this as a member.
     private val sharedPreferenceListener = SharedPreferencesChangeListener()
@@ -110,17 +110,6 @@ class MainActivity : ExpressiveActivity(), View.OnClickListener {
             }
         }
 
-    private fun setDashboardText(durationStr: String) {
-        var index = resources.getStringArray(R.array.duration_entry_values).indexOf(durationStr)
-        val durations = resources.getStringArray(R.array.duration_entries)
-        if (index == -1) {
-            index = durations.size - 1 // indexOf may return -1, which will be out of bounds.
-        }
-        val durationHeaderStr = resources.getStringArray(R.array.duration_entries)[index]
-        findViewById<TextView>(R.id.dashboard_header)?.text =
-            getString(R.string.dashboard, durationHeaderStr)
-    }
-
     private fun handleIntent(intent: Intent?) {
         intent?.let {
             if (it.getBooleanExtra("startStop", false)) {
@@ -137,6 +126,10 @@ class MainActivity : ExpressiveActivity(), View.OnClickListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Retire the former XML dashboard fragment when Android restores a pre-redesign task.
+        supportFragmentManager.fragments.filterIsInstance<StatsFragment>().forEach { fragment ->
+            supportFragmentManager.beginTransaction().remove(fragment).commitNow()
+        }
 
         sharedPreferenceListener.applyTheme(PreferenceManager.getDefaultSharedPreferences(this))
 
@@ -160,147 +153,43 @@ class MainActivity : ExpressiveActivity(), View.OnClickListener {
         supportActionBar?.hide()
         setSupportActionBar(findViewById(R.id.toolbar))
         DataModel.handleWindowInsets(this)
+        restDashboard = RestDashboard(this, savedInstanceState?.getInt("selected_night") ?: 0)
         val navigation = findViewById<BottomNavigationView>(R.id.navigation)
         navigation.setOnItemSelectedListener { item ->
-            val stats = item.itemId == R.id.nav_statistics
+            findViewById<View>(R.id.tracking_panel).visibility =
+                if (item.itemId == R.id.nav_sleep) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.main_scroll).visibility =
+                if (item.itemId == R.id.nav_statistics) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.history_scroll).visibility =
+                if (item.itemId == R.id.nav_history) View.VISIBLE else View.GONE
+            true
+        }
+        restDashboard.onOpenNight = {
+            navigation.selectedItemId = R.id.nav_statistics
             findViewById<androidx.core.widget.NestedScrollView>(R.id.main_scroll).post {
                 findViewById<androidx.core.widget.NestedScrollView>(R.id.main_scroll).scrollTo(0, 0)
             }
-            findViewById<View>(R.id.tracking_panel).visibility =
-                if (stats) View.GONE else View.VISIBLE
-            findViewById<View>(R.id.main_scroll).visibility = if (stats) View.VISIBLE else View.GONE
-            findViewById<TextView>(R.id.page_title)
-                .setText(if (stats) R.string.stats_title else R.string.rest_title)
-            findViewById<TextView>(R.id.page_subtitle)
-                .setText(if (stats) R.string.stats_subtitle else R.string.rest_subtitle)
-            true
         }
         navigation.selectedItemId = savedInstanceState?.getInt("selected_tab") ?: R.id.nav_sleep
-        findViewById<View>(R.id.explore_graphs).setOnClickListener {
+        restDashboard.exploreButton.setOnClickListener {
             startActivity(Intent(this, GraphsActivity::class.java))
         }
-        findViewById<View>(R.id.compare_statistics).setOnClickListener {
+        restDashboard.comparisonButton.setOnClickListener {
             startActivity(Intent(this, StatsActivity::class.java))
         }
         if (!preferences.getBoolean("onboarding_complete", false)) {
             startActivity(Intent(this, OnboardingActivity::class.java))
         }
-
-        val startStop = findViewById<MaterialButton>(R.id.start_stop_layout)
-        startStop.setOnClickListener(this)
-
-        preferences.liveData("dashboard_duration", "-7").observe(this) {
-            setDashboardText(it ?: "0")
-        }
-
-        // Hide plain avg and avg(daily sum) if requested:
-        preferences.liveDataBoolean("show_average_sleep_durations", false).observe(this) {
-            it?.let {
-                val fragments = supportFragmentManager
-                val stats = fragments.findFragmentById(R.id.dashboard_body)?.view
-                val layout = stats?.findViewById<View>(R.id.fragment_stats_average_layout)
-                if (it) {
-                    layout?.visibility = View.VISIBLE
-                } else {
-                    layout?.visibility = View.GONE
-                }
-            }
-        }
-        preferences.liveDataBoolean("show_average_daily_sums", true).observe(this) {
-            it?.let {
-                val fragments = supportFragmentManager
-                val stats = fragments.findFragmentById(R.id.dashboard_body)?.view
-                val layout = stats?.findViewById<View>(R.id.fragment_stats_daily_layout)
-                if (it) {
-                    layout?.visibility = View.VISIBLE
-                } else {
-                    layout?.visibility = View.GONE
-                }
-            }
-        }
-
-        val periods = findViewById<com.google.android.material.chip.ChipGroup>(R.id.period_choices)
-        val periodValues = resources.getStringArray(R.array.duration_entry_values)
-        resources.getStringArray(R.array.duration_entries).forEachIndexed { index, label ->
-            val chip =
-                com.google.android.material.chip.Chip(this).apply {
-                    id = View.generateViewId()
-                    text = label
-                    tag = periodValues[index]
-                    isCheckable = true
-                    isChecked = tag == preferences.getString("dashboard_duration", "-7")
-                    minHeight = (48 * resources.displayMetrics.density).toInt()
-                }
-            periods.addView(chip)
-        }
-        periods.setOnCheckedStateChangeListener { group, ids ->
-            ids.firstOrNull()?.let { id ->
-                preferences.edit {
-                    putString("dashboard_duration", group.findViewById<View>(id).tag as String)
-                }
-            }
-        }
-        var latestSleep: Sleep? = null
-        fun updateGoal() {
-            val latest = latestSleep
-            val goal = preferences.getString("ideal_sleep_length", "8.0") ?: "8.0"
-            val target = goal.toFloatOrNull()?.takeIf { it > 0 } ?: 8f
-            findViewById<TextView>(R.id.goal_summary).text =
-                if (latest == null) getString(R.string.goal_empty)
-                else
-                    getString(
-                        R.string.goal_summary,
-                        DataModel.formatDuration((latest.stop - latest.start) / 1000, true),
-                        goal,
-                    )
-            findViewById<com.google.android.material.progressindicator.LinearProgressIndicator>(
-                R.id.goal_progress
-            )
-                .setProgressCompat(
-                    ((latest?.lengthHours ?: 0f) / target * 100).toInt().coerceIn(0, 100),
-                    true,
-                )
-        }
-        DataModel.sleepsLive.observe(this) { sleeps ->
-            latestSleep = sleeps?.maxByOrNull { it.stop }
-            findViewById<StageSummaryView>(R.id.latest_stages).showSleep(latestSleep)
-            updateGoal()
-        }
-        preferences.liveData("ideal_sleep_length", "8.0").observe(this) { updateGoal() }
+        findViewById<MaterialButton>(R.id.start_stop_layout).setOnClickListener(this)
+        DataModel.sleepsLive.observe(this) { sleeps -> restDashboard.submitAll(sleeps.orEmpty()) }
         val sleepsAdapter = SleepsAdapter(preferences)
-        val recyclerView = findViewById<RecyclerView>(R.id.sleeps)
+        val recyclerView = restDashboard.journal
         viewModel.durationSleepsLive.observe(this) { sleeps ->
-            if (sleeps != null) {
-                val fragments = supportFragmentManager
-                val stats = fragments.findFragmentById(R.id.dashboard_body)?.view
-                val countStat = stats?.findViewById<TextView>(R.id.fragment_stats_sleeps)
-                countStat?.text = DataModel.getSleepCountStat(sleeps)
-                val durationStat = stats?.findViewById<TextView>(R.id.fragment_stats_average)
-                durationStat?.text =
-                    DataModel.getSleepDurationStat(
-                        sleeps,
-                        DataModel.getCompactView(),
-                    )
-                val durationDailyStat = stats?.findViewById<TextView>(R.id.fragment_stats_daily)
-                durationDailyStat?.text =
-                    DataModel.getSleepDurationDailyStat(
-                        sleeps,
-                        DataModel.getCompactView(),
-                        DataModel.getIgnoreEmptyDays(),
-                        DataModel.getStatFunction(),
-                    )
-                sleepsAdapter.data = sleeps
-
-                // Set up placeholder text if there are no sleeps.
-                val noSleepsView = findViewById<TextView>(R.id.no_sleeps)
-                if (sleeps.isEmpty()) {
-                    recyclerView.visibility = View.GONE
-                    noSleepsView.visibility = View.VISIBLE
-                } else {
-                    recyclerView.visibility = View.VISIBLE
-                    noSleepsView.visibility = View.GONE
-                }
-            }
+            val data = sleeps.orEmpty()
+            sleepsAdapter.data = data
+            restDashboard.submitHistory(data)
+            recyclerView.visibility = if (data.isEmpty()) View.GONE else View.VISIBLE
+            restDashboard.journalEmpty.visibility = if (data.isEmpty()) View.VISIBLE else View.GONE
         }
 
         val recyclerViewLayout = LinearLayoutManager(this)
@@ -330,8 +219,10 @@ class MainActivity : ExpressiveActivity(), View.OnClickListener {
                 )
             )
         itemTouchHelper.attachToRecyclerView(recyclerView)
-        val sleepClickCallback = SleepClickCallback(this, sleepsAdapter, recyclerView)
-        sleepsAdapter.clickCallback = sleepClickCallback
+        sleepsAdapter.clickCallback = View.OnClickListener { view ->
+            val position = recyclerView.getChildAdapterPosition(view)
+            sleepsAdapter.data.getOrNull(position)?.let { restDashboard.selectNight(it) }
+        }
 
         // See if the activity is triggered from the widget. If so, toggle the start/stop state.
         handleIntent(intent)
@@ -356,7 +247,15 @@ class MainActivity : ExpressiveActivity(), View.OnClickListener {
             "selected_tab",
             findViewById<BottomNavigationView>(R.id.navigation).selectedItemId,
         )
+        outState.putInt("selected_night", restDashboard.selectedId)
         super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        if (::restDashboard.isInitialized) restDashboard.dispose()
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .unregisterOnSharedPreferenceChangeListener(sharedPreferenceListener)
+        super.onDestroy()
     }
 
     override fun onStart() {
@@ -372,7 +271,7 @@ class MainActivity : ExpressiveActivity(), View.OnClickListener {
                 Intent(this, StageTrackingService::class.java),
             )
         }
-        val recyclerView = findViewById<RecyclerView>(R.id.sleeps)
+        val recyclerView = restDashboard.journal
         recyclerView.findViewHolderForAdapterPosition(0)?.let {
             // Since the adapter unconditionally gets assigned in `onCreate()`
             // it shouldn't be necessary to consider fixing it here.

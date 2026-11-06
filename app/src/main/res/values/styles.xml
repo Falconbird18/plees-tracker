@@ -6,6 +6,8 @@
     <item name="colorOnPrimary">@color/plees_on_primary</item>
     <item name="colorPrimaryContainer">@color/plees_container</item>
     <item name="colorOnPrimaryContainer">@color/plees_on_container</item>
+    <item name="colorSecondary">@color/plees_chart_secondary</item>
+    <item name="colorTertiary">@color/plees_chart_tertiary</item>
     <item name="colorSecondaryContainer">@color/plees_secondary</item>
     <item name="colorOnSecondaryContainer">@color/plees_on_secondary</item>
     <item name="colorTertiaryContainer">@color/plees_tertiary</item>

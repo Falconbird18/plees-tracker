@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="night_tab">Night</string>
+  <string name="history_tab">History</string>
+  <string name="night_eyebrow">THE NIGHT EDIT</string>
+  <string name="night_headline">Your night.</string>
+  <string name="history_eyebrow">THE BIGGER PICTURE</string>
+  <string name="history_headline">Find your\nkind of rhythm.</string>
+  <string name="previous_night">Previous recorded night</string>
+  <string name="next_night">Next recorded night</string>
+  <string name="choose_night">Choose a night</string>
+  <string name="logged_rest">LOGGED REST</string>
+  <string name="of_duration_goal">of your %1$s goal</string>
+  <string name="goal_badge">GOAL</string>
+  <string name="no_night_title">Your story\nstarts tonight.</string>
+  <string
+      name="no_night_body">Track a rest with the Sleep button. Your night, goals, and patterns will meet here.</string>
+  <string name="stages_headline">In full colour.</string>
+  <string name="stages_ring_caption">Estimated stages · tap a colour below</string>
+  <string name="estimated_coverage">estimated coverage</string>
+  <string name="no_stage_data">No estimates</string>
+  <string name="overnight_story">The overnight story</string>
+  <string name="timeline_subtitle">Every stretch of the night, including gaps.</string>
+  <string
+      name="stage_unavailable_body">This rest has no usable stage estimates. Its full logged duration is shown as unavailable, never filled in as sleep stages.</string>
+  <string name="goals_headline">Make space\nfor your rhythm.</string>
+  <string name="tune_goals">Tune your goals</string>
+  <string name="duration_goal">Rest duration</string>
+  <string name="bedtime_goal">Bedtime target</string>
+  <string name="wakeup_goal">Wake-up target</string>
+  <string name="weekly_goal">Consistent nights per week</string>
+  <string name="save_goals">Save goals</string>
+  <string
+      name="goal_schedule_note">Targets guide your charts. They do not enable or change reminders.</string>
+  <string
+      name="schedule_rule">A consistent night starts and ends within 30 minutes of your targets. We use the longest rest on each day.</string>
+  <string name="week_ending">Week ending %1$s</string>
+  <string name="weekly_progress">%1$d of %2$d target nights</string>
+  <string name="rhythm_garden">Your rhythm garden</string>
+  <string name="garden_key">Filled = on target · outline = outside target · dash = no record</string>
+  <string name="bedtime_label">SETTLED IN</string>
+  <string name="wakeup_label">HELLO, MORNING</string>
+  <string name="actual_time">Logged %1$s</string>
+  <string name="target_time">Target %1$s</string>
+  <string name="on_target">Within your window</string>
+  <string name="minutes_early">%1$d min earlier</string>
+  <string name="minutes_late">%1$d min later</string>
+  <string name="notes_and_edit">Notes &amp; edit this rest</string>
+  <string name="recent_nights">A few recent nights</string>
+  <string name="history_stacked">Nights, stacked.</string>
+  <string
+      name="history_stacked_hint">Stage estimates add up to logged rest. Tap a bar to open a night from that period.</string>
+  <string name="history_goal_chart">A little closer.</string>
+  <string name="history_goal_hint">Logged rest against your duration goal. Gaps mean no record.</string>
+  <string name="chart_legend">Solid = logged rest · dashed = your goal</string>
+  <string name="history_latest_days">Latest %1$d calendar days · totals use the selected period</string>
+  <string name="history_journal">Every night\nhas a story.</string>
+  <string name="tracked_rests">TRACKED RESTS</string>
+  <string name="per_recorded_day">AVG / TRACKED DAY</string>
+  <string name="history_empty_chart">Your first recorded night will light up this chart.</string>
+  <string name="stage_chart_accessibility">%1$s. Logged rest: %2$s. %3$s</string>
+  <string name="weekly_goal_value">%1$d nights / week</string>
+  <string name="duration_goal_value">%1$s hours</string>
+  <string
+      name="goal_week_caption">Only recorded nights count toward your target; empty days stay empty.</string>
+  <string name="history_period_week">7 days</string>
+  <string name="history_period_month">30 days</string>
+  <string name="history_period_year">Year</string>
+  <string name="history_period_all">All time</string>
+  <string name="no_record_day">No rest recorded for this day.</string>
+  <string name="goal_percent">%1$d%%</string>
+  <string name="selected_stage_value">%1$s · %2$s</string>
+  <string name="chart_hours">hours</string>
+  <string name="garden_accessibility">%1$d on-schedule nights across these 7 days.</string>
+  <string name="rest_sensor_source">Source: %1$s</string>
+  <string name="history_period_fortnight">14 days</string>
+  <string name="chart_target">Dashed line · %1$s goal</string>
+  <string name="history_monthly_average">%1$d months · daily averages over tracked days</string>
+  <string name="history_yearly_average">%1$d years · daily averages over tracked days</string>
+</resources>

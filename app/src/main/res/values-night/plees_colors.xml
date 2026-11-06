@@ -18,4 +18,6 @@
   <color name="ocean_container">#004F54</color>
   <color name="ocean_on_container">#95F0F5</color>
   <bool name="plees_light">false</bool>
+  <color name="plees_chart_secondary">#B5D978</color>
+  <color name="plees_chart_tertiary">#FFA9D4</color>
 </resources>

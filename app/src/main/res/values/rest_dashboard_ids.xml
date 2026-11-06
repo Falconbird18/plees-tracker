@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <item name="goal_duration_slider" type="id"/>
+  <item name="goal_weekly_slider" type="id"/>
+  <item name="save_rest_goals" type="id"/>
+  <item name="night_duration" type="id"/>
+  <item name="night_stage_ring" type="id"/>
+  <item name="night_goal_summary" type="id"/>
+  <item name="night_date_selector" type="id"/>
+  <item name="history_stack_chart" type="id"/>
+  <item name="history_goal_chart" type="id"/>
+  <item name="sleeps" type="id"/>
+  <item name="no_sleeps" type="id"/>
+  <item name="explore_graphs" type="id"/>
+  <item name="compare_statistics" type="id"/>
+</resources>
